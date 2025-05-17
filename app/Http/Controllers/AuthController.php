@@ -85,11 +85,42 @@ class AuthController extends Controller
      * Return authenticated user's info.
      */
     public function userInfo(Request $request): JsonResponse
-    {
+{
+    try {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+
         return response()->json([
-            'first_name' => $request->user()->first_name,
+            'id' => $user->id,
+            'first_name' => $user->first_name,
+            'middle_name' => $user->middle_name,
+            'last_name' => $user->last_name,
+            'salutation' => $user->salutation,
+            'gender' => $user->gender,
+            'date_of_birth' => $user->date_of_birth,
+            'email' => $user->email,
+            'student_number' => $user->student_number,
+            'course' => $user->course,
+            'mobile' => $user->mobile,
+            'telephone' => $user->telephone,
+            'zipcode' => $user->zipcode,
+            'state' => $user->state,
+            'city' => $user->city,
+            'street' => $user->street,
         ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'error' => 'Server error',
+            'message' => $e->getMessage()
+        ], 500);
     }
+}
+
+
+
 
     /**
      * Logout user and delete current token.

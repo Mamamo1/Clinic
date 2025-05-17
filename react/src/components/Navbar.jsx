@@ -1,81 +1,77 @@
 import {
-    User as UserIcon,
-    Bell,
-    Info,
-    FileText,
-    LogOut,
-    ChevronDown,
-    Clock,
-    Settings
-  } from "lucide-react";
-  import { useNavigate } from "react-router-dom";
-  import { useEffect, useState, useRef } from "react";
-  import axios from "axios";
-  import { motion } from "framer-motion";
-  import '../index.css';
-  
-  export default function UserDashboard() {
-    const navigate = useNavigate();
-    const [firstName, setFirstName] = useState("");
-    const [dropdownOpen, setDropdownOpen] = useState(false);
-    const [notifOpen, setNotifOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const dropdownRef = useRef(null);
-    const notifRef = useRef(null);
-  
-    useEffect(() => {
-      const authToken = localStorage.getItem("auth_token");
-  
-      if (!authToken) {
-        navigate("/login");
-      } else {
-        axios
-          .get("http://localhost:8000/api/user", {
-            headers: {
-              Authorization: `Bearer ${authToken}`,
-            },
-          })
-          .then((response) => {
-            setFirstName(response.data.first_name);
-          })
-          .catch(() => {
-            navigate("/login");
-          });
-      }
-  
-      const handleClickOutside = (event) => {
-        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-          setDropdownOpen(false);
-        }
-        if (notifRef.current && !notifRef.current.contains(event.target)) {
-          setNotifOpen(false);
-        }
-      };
-  
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [navigate]);
-  
-    const handleLogout = () => {
-      setLoading(true); // Start loading animation
-      const authToken = localStorage.getItem("auth_token");
+  User as UserIcon,
+  Bell,
+  LogOut,
+  ChevronDown,
+  Settings,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
+import axios from "axios";
+import '../index.css';
+import { capitalizeWords } from '../utils';
+
+export default function UserDashboard() {
+  const navigate = useNavigate();
+  const [firstName, setFirstName] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const dropdownRef = useRef(null);
+  const notifRef = useRef(null);
+
+  useEffect(() => {
+    const authToken = localStorage.getItem("auth_token");
+
+    if (!authToken) {
+      navigate("/login");
+    } else {
       axios
-        .post("http://localhost:8000/api/logout", {}, {
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-          },
+        .get("http://localhost:8000/api/user", {
+          headers: { Authorization: `Bearer ${authToken}` },
         })
-        .then(() => {
-          localStorage.removeItem("auth_token");
-          setLoading(false); // Stop loading animation
-          navigate("/login");
+        .then((response) => {
+          // Capitalize first name properly
+          setFirstName(capitalizeWords(response.data.first_name));
         })
         .catch(() => {
-          localStorage.removeItem("auth_token");
-          setLoading(false); // Stop loading animation in case of error
           navigate("/login");
         });
+    }
+
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setNotifOpen(false);
+      }
     };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [navigate]);
+
+  const handleLogout = () => {
+    setLoading(true);
+    const authToken = localStorage.getItem("auth_token");
+    axios
+      .post(
+        "http://localhost:8000/api/logout",
+        {},
+        { headers: { Authorization: `Bearer ${authToken}` } }
+      )
+      .then(() => {
+        localStorage.removeItem("auth_token");
+        setLoading(false);
+        navigate("/login");
+      })
+      .catch(() => {
+        localStorage.removeItem("auth_token");
+        setLoading(false);
+        navigate("/login");
+      });
+  };
   
     return (
       <div>
@@ -118,7 +114,7 @@ import {
               {notifOpen && (
                 <div className="absolute right-0 mt-2 w-[380px] bg-white text-black rounded-lg shadow-xl z-50">
                   <div className="p-4 border-b font-bold text-xl">Notifications</div>
-                  {/* Your notification content */}
+                  {/* Notification  */}
                 </div>
               )}
             </div>
@@ -126,7 +122,7 @@ import {
             {/* Greeting */}
             <div className="text-lg font-semibold text-white">Hi, {firstName}</div>
   
-            {/* User Icon + Dropdown */}
+            {/* User Icon and Dropdown */}
             <div
               className="w-8 h-8 bg-white rounded-full flex items-center justify-center cursor-pointer"
               onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -140,7 +136,7 @@ import {
                 <button
                   onClick={() => {
                     setDropdownOpen(false);
-                    navigate("/user/profile");
+                    navigate('/user/profile', { replace: true });
                   }}
                   className="flex items-center px-4 py-2 hover:bg-gray-100 w-full"
                 >
@@ -162,9 +158,7 @@ import {
             )}
           </div>
         </div>
-  
-        {/* Optional Dashboard Content Below */}
-        {/* ... your cards or content go here ... */}
+
       </div>
     );
   }
