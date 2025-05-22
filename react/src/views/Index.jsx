@@ -5,7 +5,7 @@ import { Link, NavLink } from 'react-router-dom';
 
 export default function Index() {
   return (
-    <div className="font-sans">
+   <>
       {/* Navbar */}
       <nav className="bg-[#FFD100] p-4 flex justify-between items-center px-8">
         <div className="flex items-center space-x-3">
@@ -84,6 +84,6 @@ export default function Index() {
           </p>
         </div>
       </section>
-    </div>
+    </>
   );
 }

@@ -21,8 +21,6 @@ export default function Login() {
     const userToken = localStorage.getItem('auth_token');
     const accountType = localStorage.getItem('account_type');
     
-    console.log('Account Type:', accountType);
-
     if (userToken) {
       if (accountType === 'Super Admin') {
         navigate('/admin-dashboard');
