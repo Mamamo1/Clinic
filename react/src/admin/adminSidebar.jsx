@@ -8,42 +8,102 @@ import {
   FaBell,
   FaFileMedical,
 } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 
 const AdminSidebar = () => {
   return (
-    <div className="w-64 h-screen fixed left-0 bg-gray-200 p-4 shadow-md flex flex-col">
+    <div className="w-64 h-screen fixed left-0 bg-gray-100 p-6 shadow-md flex flex-col">
       <nav className="flex-1">
-        <ul className="space-y-4 text-gray-800">
-          <li className="flex items-center text-blue-600 font-bold">
-            <Link to="/admin" className="flex items-center w-full">
-              <FaChartBar className="mr-2" /> Dashboard
-            </Link>
-          </li>
+        <ul className="space-y-6 text-gray-700">
           <li>
-            <Link to="/admin/users" className="flex items-center hover:text-blue-600 hover:underline">
-              <FaUserShield className="mr-2" /> User Management
-            </Link>
+            <NavLink
+              to="/admin"
+              end
+              className={({ isActive }) =>
+                `flex items-center px-3 py-2 rounded-md font-semibold transition-colors duration-200 ${
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'hover:bg-blue-100 hover:text-blue-700'
+                }`
+              }
+            >
+              <FaChartBar className="mr-3 text-lg" /> Dashboard
+            </NavLink>
           </li>
+
           <li>
-            <Link to="/admin/records" className="flex items-center hover:text-blue-600 hover:underline">
-              <FaFileMedical className="mr-2" /> Medical Records
-            </Link>
+            <NavLink
+              to="/admin/userManagement"
+              className={({ isActive }) =>
+                `flex items-center px-3 py-2 rounded-md font-semibold transition-colors duration-200 ${
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'hover:bg-blue-100 hover:text-blue-700'
+                }`
+              }
+            >
+              <FaUserShield className="mr-3 text-lg" /> User Management
+            </NavLink>
           </li>
+
           <li>
-            <Link to="/admin/inventory" className="flex items-center hover:text-blue-600 hover:underline">
-              <FaCubes className="mr-2" /> Inventory
-            </Link>
+            <NavLink
+              to="/admin/records"
+              className={({ isActive }) =>
+                `flex items-center px-3 py-2 rounded-md font-semibold transition-colors duration-200 ${
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'hover:bg-blue-100 hover:text-blue-700'
+                }`
+              }
+            >
+              <FaFileMedical className="mr-3 text-lg" /> Medical Records
+            </NavLink>
           </li>
+
           <li>
-            <Link to="/admin/reports" className="flex items-center hover:text-blue-600 hover:underline">
-              <FaClipboardList className="mr-2" /> Reports
-            </Link>
+            <NavLink
+              to="/admin/Inventory"
+              className={({ isActive }) =>
+                `flex items-center px-3 py-2 rounded-md font-semibold transition-colors duration-200 ${
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'hover:bg-blue-100 hover:text-blue-700'
+                }`
+              }
+            >
+              <FaCubes className="mr-3 text-lg" /> Inventory
+            </NavLink>
           </li>
+
           <li>
-            <Link to="/admin/logs" className="flex items-center hover:text-blue-600 hover:underline">
-              <FaBell className="mr-2" /> Security Logs
-            </Link>
+            <NavLink
+              to="/admin/reports"
+              className={({ isActive }) =>
+                `flex items-center px-3 py-2 rounded-md font-semibold transition-colors duration-200 ${
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'hover:bg-blue-100 hover:text-blue-700'
+                }`
+              }
+            >
+              <FaClipboardList className="mr-3 text-lg" /> Reports
+            </NavLink>
+          </li>
+
+          <li>
+            <NavLink
+              to="/admin/logs"
+              className={({ isActive }) =>
+                `flex items-center px-3 py-2 rounded-md font-semibold transition-colors duration-200 ${
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'hover:bg-blue-100 hover:text-blue-700'
+                }`
+              }
+            >
+              <FaBell className="mr-3 text-lg" /> Security Logs
+            </NavLink>
           </li>
         </ul>
       </nav>

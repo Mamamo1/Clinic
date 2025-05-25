@@ -12,6 +12,7 @@ export default function Login() {
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [generalError, setGeneralError] = useState('');
+  
 
   // Get the loading context
   const { loading, showLoading, hideLoading } = useLoading();
@@ -64,7 +65,8 @@ export default function Login() {
       if (response.data.success) {
         // Save token and account type in localStorage
         localStorage.setItem('auth_token', response.data.token);
-        localStorage.setItem('account_type', response.data.user.account_type); // Save the account type
+        localStorage.setItem('account_type', response.data.user.account_type);
+        localStorage.setItem('first_name', response.data.user.first_name); // Save the account type
 
         // Redirect based on account type
         if (response.data.user.account_type === 'Super Admin') {

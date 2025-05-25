@@ -5,10 +5,13 @@ import Index from './views/Index';
 import UserLayout from './components/UserLayout';
 import User from './user/user';
 import ConsultationHistory from './user/history';
-import { AdminDashboard } from './admin/AdminDashboard';
-import AdminRoute from './admin/AdminRoute';
 import PendingRequirements from './user/pending';
 import StudentProfile from './user/profile';
+import { AdminDashboard } from './admin/AdminDashboard';
+import AdminRoute from './admin/AdminRoute';
+import UserManagement from './admin/userManagement';
+import AdminLayout from './admin/AdminLayout';
+import InventorySystem from './admin/InventorySystem';
 
 const router = createBrowserRouter([
   {
@@ -35,25 +38,39 @@ const router = createBrowserRouter([
         path: 'history',
         element: <ConsultationHistory />,
       },
-    {
-      path: 'pending',
-      element: <PendingRequirements />,
-    },
-    {
-      path: 'profile',
-      element: <StudentProfile />,
-    },
+      {
+        path: 'pending',
+        element: <PendingRequirements />,
+      },
+      {
+        path: 'profile',
+        element: <StudentProfile />,
+      },
     ],
   },
   {
-  path: '/admin',
-  element: (
-    <AdminRoute>
-      <AdminDashboard />
-    </AdminRoute>
-  ),
-},
-
+    path: '/admin',
+    element: (
+      <AdminRoute>
+        <AdminLayout />
+      </AdminRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: <AdminDashboard />,
+      },
+      {
+        path: 'userManagement',
+        element: <UserManagement />,
+      },
+      {
+        path: 'Inventory',
+        element: <InventorySystem />,  // Use the imported InventorySystem here
+      },
+      // add other admin pages here
+    ],
+  },
 ]);
 
 export default router;

@@ -120,6 +120,15 @@ class AuthController extends Controller
 }
 
 
+public function getAllUsers()
+{
+    $user = auth()->user();
+    if (!in_array($user->account_type, ['Super Admin', 'Admin_Nurse'])) {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    return response()->json(User::all());
+}
 
 
     /**

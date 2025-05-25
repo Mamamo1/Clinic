@@ -1,6 +1,5 @@
 import {
   User as UserIcon,
-  Bell,
   LogOut,
   ChevronDown,
   Settings,
@@ -8,28 +7,24 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
-import '../index.css';
-import { capitalizeWords } from '../utils';
+import "../index.css";
+import { capitalizeWords } from "../utils";
 
 export default function AdminNavbar() {
   const navigate = useNavigate();
-  const [firstName, setFirstName] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
 
-  const authToken = localStorage.getItem("auth_token");
-
   useEffect(() => {
-    if (!authToken) {
+    const token = localStorage.getItem("auth_token");
+
+    if (!token) {
       navigate("/login");
     } else {
       axios
         .get("http://localhost:8000/api/user", {
-          headers: { Authorization: `Bearer ${authToken}` },
-        })
-        .then((response) => {
-          setFirstName(capitalizeWords(response.data.first_name));
+          headers: { Authorization: `Bearer ${token}` },
         })
         .catch(() => {
           navigate("/login");
@@ -44,22 +39,25 @@ export default function AdminNavbar() {
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [navigate, authToken]);
+  }, [navigate]);
 
   const handleLogout = () => {
     setLoading(true);
+    const token = localStorage.getItem("auth_token");
+
     axios
       .post(
         "http://localhost:8000/api/logout",
         {},
-        { headers: { Authorization: `Bearer ${authToken}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       )
       .then(() => {
         localStorage.removeItem("auth_token");
         setLoading(false);
         navigate("/login");
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error("Logout failed:", error);
         localStorage.removeItem("auth_token");
         setLoading(false);
         navigate("/login");
@@ -77,7 +75,9 @@ export default function AdminNavbar() {
               alt="NU Logo"
               className="w-24 h-24 animate-spin-center"
             />
-            <p className="mt-4 text-white text-center font-bold text-2xl">Processing...</p>
+            <p className="mt-4 text-white text-center font-bold text-2xl">
+              Processing...
+            </p>
           </div>
         </div>
       )}
@@ -94,21 +94,19 @@ export default function AdminNavbar() {
           <h1 className="text-xl font-bold">NU-CARES</h1>
         </div>
 
-        {/* Right: Greeting, Avatar, Dropdown */}
-        <div className="flex items-center space-x-4 relative">
-          <div className="text-lg font-semibold text-white">Hi, {firstName}</div>
-
+        {/* Right: Avatar & Dropdown */}
+        <div className="flex items-center space-x-2 relative">
           <div
-            className="w-8 h-8 bg-white rounded-full flex items-center justify-center cursor-pointer"
+            className="flex items-center space-x-2 cursor-pointer"
             onClick={() => setDropdownOpen(!dropdownOpen)}
+            tabIndex={0}
+            role="button"
           >
-            <UserIcon className="text-gray-700" />
+            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+              <UserIcon className="text-gray-700" />
+            </div>
+            <ChevronDown className="text-white" />
           </div>
-
-          <ChevronDown
-            className="cursor-pointer"
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-          />
 
           {dropdownOpen && (
             <div
@@ -118,7 +116,7 @@ export default function AdminNavbar() {
               <button
                 onClick={() => {
                   setDropdownOpen(false);
-                  navigate('/user/profile', { replace: true });
+                  navigate("/user/profile", { replace: true });
                 }}
                 className="flex items-center px-4 py-2 hover:bg-gray-100 w-full"
               >
