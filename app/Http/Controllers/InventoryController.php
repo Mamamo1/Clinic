@@ -9,7 +9,7 @@ class InventoryController extends Controller
 {
     public function index()
     {
-        // Wrap in 'data' so frontend can safely use res.data.data
+        // Return all inventory items wrapped in 'data' for frontend
         return response()->json(['data' => Inventory::all()]);
     }
 
@@ -18,20 +18,23 @@ class InventoryController extends Controller
         $validated = $request->validate([
             'category' => 'required|string',
             'quantity' => 'required|integer',
+            'threshold' => 'required|integer',
             'generic' => 'nullable|string',
             'brand_name' => 'nullable|string',
             'dosage' => 'nullable|string',
             'name' => 'nullable|string',
         ]);
 
-        Inventory::create($validated);
-        return response()->json(['message' => 'Created'], 201);
+        $item = Inventory::create($validated);
+
+        return response()->json(['message' => 'Created', 'data' => $item], 201);
     }
 
     public function update(Request $request, Inventory $inventory)
     {
         $validated = $request->validate([
             'quantity' => 'required|integer',
+            'threshold' => 'required|integer',
             'generic' => 'nullable|string',
             'brand_name' => 'nullable|string',
             'dosage' => 'nullable|string',
@@ -39,7 +42,8 @@ class InventoryController extends Controller
         ]);
 
         $inventory->update($validated);
-        return response()->json(['message' => 'Updated'], 200);
+
+        return response()->json(['message' => 'Updated', 'data' => $inventory], 200);
     }
 
     public function destroy($id)

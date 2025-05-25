@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 class Inventory extends Model
 {
     protected $fillable = [
-        'category',
-        'quantity',
-        'generic',
-        'brand_name',
-        'dosage',
-        'name',
-    ];
+    'category',
+    'quantity',
+    'threshold',
+    'generic',
+    'brand_name',
+    'dosage',
+    'name',
+];
 }
