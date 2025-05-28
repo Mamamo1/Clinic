@@ -3,8 +3,8 @@ import axios from 'axios';
 import { capitalizeWords } from '../utils';
 import { ArrowLeftIcon } from '@heroicons/react/24/solid';
 import { useNavigate } from 'react-router-dom';
-import { useLoading } from '../components/LoadingContext';
-import LoadingScreen from '../components/LoadingScreen';
+import { useLoading } from './components/LoadingContext';
+import LoadingScreen from './components/LoadingScreen';
 
 const StudentProfile = () => {
   const navigate = useNavigate();

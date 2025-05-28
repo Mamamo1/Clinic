@@ -12,6 +12,10 @@ Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logo
 Route::middleware('auth:sanctum')->get('/user', [AuthController::class, 'userInfo']);
 Route::middleware('auth:sanctum')->get('/admin', [AuthController::class, 'admin']);
 Route::middleware('auth:sanctum')->get('/users', [AuthController::class, 'getAllUsers']);
+Route::middleware('auth:sanctum')->get('/users/filtered', [AuthController::class, 'filteredUsers']);
+Route::middleware('auth:sanctum')->get('/users/{id}', [AuthController::class, 'getUser']);
 Route::apiResource('inventory', InventoryController::class);
-
-
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/users/medical-staff', [AuthController::class, 'getMedicalStaff']);
+    Route::post('/inventory/deduct', [InventoryController::class, 'deduct']);
+});

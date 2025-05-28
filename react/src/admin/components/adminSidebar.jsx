@@ -48,7 +48,7 @@ const AdminSidebar = () => {
 
           <li>
             <NavLink
-              to="/admin/records"
+              to="/admin/ManageMedicalRecords"
               className={({ isActive }) =>
                 `flex items-center px-3 py-2 rounded-md font-semibold transition-colors duration-200 ${
                   isActive
@@ -57,7 +57,7 @@ const AdminSidebar = () => {
                 }`
               }
             >
-              <FaFileMedical className="mr-3 text-lg" /> Medical Records
+              <FaFileMedical className="mr-3 text-lg" /> Manage Medical Records
             </NavLink>
           </li>
 

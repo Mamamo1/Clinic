@@ -1,5 +1,5 @@
 import React from "react";
-import { useLoading } from "../components/LoadingContext";
+import { useLoading } from "./LoadingContext";
 
 const LoadingScreen = () => {
   const { loading } = useLoading();

@@ -1,17 +1,26 @@
 import { createBrowserRouter } from 'react-router-dom';
+
+// Views
 import Login from './views/Login';
 import Signup from './views/Signup';
 import Index from './views/Index';
-import UserLayout from './components/UserLayout';
+
+// User Pages & Layout
+import UserLayout from './user/components/UserLayout';
 import User from './user/user';
 import ConsultationHistory from './user/history';
 import PendingRequirements from './user/pending';
 import StudentProfile from './user/profile';
+
+// Admin Pages & Layout
 import { AdminDashboard } from './admin/AdminDashboard';
-import AdminRoute from './admin/AdminRoute';
+import AdminRoute from './admin/components/AdminRoute';
 import UserManagement from './admin/userManagement';
-import AdminLayout from './admin/AdminLayout';
+import AdminLayout from './admin/components/AdminLayout';
 import InventorySystem from './admin/InventorySystem';
+import ManageMedicalRecords from './admin/MedicalRecords/ManageMedicalRecords';
+import UserDetail from './admin/MedicalRecords/UserDetail';
+
 
 const router = createBrowserRouter([
   {
@@ -68,7 +77,19 @@ const router = createBrowserRouter([
         path: 'Inventory',
         element: <InventorySystem />,  // Use the imported InventorySystem here
       },
-      // add other admin pages here
+      {
+        path: 'ManageMedicalRecords',
+        element: <ManageMedicalRecords />,
+      },
+      {
+        path: 'MedicalRecords',
+        children: [
+          {
+            path: 'UserDetail/:id',
+            element: <UserDetail />,
+          },
+        ],
+      },
     ],
   },
 ]);

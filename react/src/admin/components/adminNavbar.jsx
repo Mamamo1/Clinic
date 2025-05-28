@@ -7,8 +7,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
-import "../index.css";
-import { capitalizeWords } from "../utils";
+import "../../index.css";
+import { capitalizeWords } from "../../utils";
 
 export default function AdminNavbar() {
   const navigate = useNavigate();
@@ -68,19 +68,19 @@ export default function AdminNavbar() {
     <div>
       {/* Loading Overlay */}
       {loading && (
-        <div className="absolute top-0 left-0 w-full h-full bg-black/50 z-50 flex items-center justify-center">
-          <div className="flex flex-col justify-center items-center">
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/NU_shield.svg/800px-NU_shield.svg.png"
-              alt="NU Logo"
-              className="w-24 h-24 animate-spin-center"
-            />
-            <p className="mt-4 text-white text-center font-bold text-2xl">
-              Processing...
-            </p>
-          </div>
+      <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
+        <div className="flex flex-col justify-center items-center">
+          <img
+            src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/NU_shield.svg/800px-NU_shield.svg.png"
+            alt="NU Logo"
+            className="w-24 h-24 animate-spin-center"
+          />
+          <p className="mt-4 text-white text-center font-bold text-2xl">
+            Processing...
+          </p>
         </div>
-      )}
+      </div>
+    )}
 
       {/* Navbar */}
       <div className="bg-[#2E3192] text-white py-4 px-8 flex justify-between items-center border-b-4 border-yellow-400">

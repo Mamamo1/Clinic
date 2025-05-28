@@ -1,8 +1,8 @@
 // /src/components/App.jsx
-import { LoadingProvider } from '../components/LoadingContext';
-import LoadingScreen from '../components/LoadingScreen';
+import { LoadingProvider } from './LoadingContext';
+import LoadingScreen from './LoadingScreen';
 import { RouterProvider } from 'react-router-dom';
-import router from '../router';
+import router from '../../router';
 
 const App = () => {
   return (

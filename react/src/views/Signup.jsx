@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { FaUserPlus } from "react-icons/fa";
-import axiosClient from "../axios"; 
-import { useLoading } from '../components/LoadingContext';
-import LoadingScreen from '../components/LoadingScreen';
-
+import axios from "axios"; 
+import Swal from "sweetalert2";
+import LoadingScreen from "../user/components/LoadingScreen";
 
 
 export default function Signup() {
@@ -17,6 +16,7 @@ export default function Signup() {
     password: '',
     password_confirmation: '',
     student_number: '',
+    employee_id: '',
     course: '',
     dob: '',
     mobile: '',
@@ -27,12 +27,16 @@ export default function Signup() {
     city: '',
     state: '',
     zipcode: '',
-    telephone: ''
+    telephone: '',
+    account_type: ''
   });
 
+  const [role, setRole] = useState("");
+  const [courseType, setCourseType] = useState("");
   const [agreeToTerms, setAgreeToTerms] = useState(false);
-   const { loading, showLoading, hideLoading } = useLoading();
   const [errorMessage, setErrorMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
 
   useEffect(() => {
     const userToken = localStorage.getItem("auth_token");
@@ -49,72 +53,164 @@ export default function Signup() {
     }));
   };
 
+  const handleRoleChange = (e) => {
+  const selectedRole = e.target.value;
+  setRole(selectedRole);
+
+  let newCourseType = "";
+  let accountType = "";
+
+  if (selectedRole === "Employee") {
+    newCourseType = "Employee";
+    accountType = "Employee";
+  } else if (selectedRole === "Student") {
+    newCourseType = "SHS";
+    accountType = "SHS";
+  } else {
+    newCourseType = "College";
+    accountType = "College";
+  }
+
+  setCourseType(newCourseType);
+
+  setFormData((prev) => ({
+    ...prev,
+    account_type: accountType,
+    student_number: '',
+    employee_id: '',
+    course: '',
+  }));
+};
+
+
+
+
   const handleCheckboxChange = () => {
     setAgreeToTerms((prev) => !prev);
   };
 
   const validateForm = () => {
-    if (formData.password !== formData.password_confirmation) {
-      return "Passwords do not match";
-    }
-    if (!agreeToTerms) {
-      return "You must agree to the terms and conditions.";
-    }
-    return "";
+  if (formData.password !== formData.password_confirmation) {
+    return "Passwords do not match";
+  }
+  if (!agreeToTerms) {
+    return "You must agree to the terms and conditions.";
+  }
+  if (role === "Student" && !formData.student_number.trim()) {
+    return "Student Number is required for Students.";
+  }
+  if (role === "Employee" && !formData.employee_id.trim()) {
+    return "Employee ID is required for Employees.";
+  }
+  return "";
+};
+  
+
+    const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  const validationError = validateForm();
+  if (validationError) {
+    Swal.fire("Error", validationError, "error");
+    return;
+  }
+
+  setLoading(true);
+
+  const payload = {
+    salutation: formData.salutation?.trim(),
+    first_name: formData.firstName?.trim(),
+    middle_name: formData.middleName?.trim(),
+    last_name: formData.lastName?.trim(),
+    email: formData.email?.trim(),
+    password: formData.password,
+    password_confirmation: formData.password_confirmation,
+    employee_id: formData.employee_id?.trim(),
+    student_number: formData.student_number?.trim(),
+    course: formData.course?.trim(),
+    dob: formData.dob,
+    mobile: formData.mobile?.trim(),
+    gender: formData.gender,
+    nationality: formData.nationality,
+    street: formData.street?.trim(),
+    city: formData.city?.trim(),
+    state: formData.state?.trim(),
+    zipcode: formData.zipcode?.trim(),
+    telephone: formData.telephone?.trim(),
+    account_type: formData.account_type,
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setErrorMessage("");
+  try {
+  const response = await axios.post("http://localhost:8000/api/signup", payload);
 
-    const validationError = validateForm();
-    if (validationError) {
-      setErrorMessage(validationError);
-      return;
-    }
-
-    showLoading(true);
-
-    const payload = {
-      salutation: formData.salutation?.trim(),
-      first_name: formData.firstName?.trim(),
-      middle_name: formData.middleName?.trim(),
-      last_name: formData.lastName?.trim(),
-      email: formData.email?.trim(),
-      password: formData.password,
-      password_confirmation: formData.password_confirmation,
-      student_number: formData.student_number?.trim(),
-      course: formData.course?.trim(),
-      dob: formData.dob,
-      mobile: formData.mobile?.trim(),
-      gender: formData.gender,
-      nationality: formData.nationality,
-      street: formData.street?.trim(),
-      city: formData.city?.trim(),
-      state: formData.state?.trim(),
-      zipcode: formData.zipcode?.trim(),
-      telephone: formData.telephone?.trim()
-    };
-    
-
-    try {
-      const response = await axiosClient.post("/signup", payload);
-      console.log("Registration Successful:", response.data);
+  if (response.data?.success === true) {
+    setLoading(false);
+    Swal.fire("Success", "Registration successful! You can now log in.", "success").then(() => {
       navigate("/login");
-    } catch (error) {
+    });
+  } else {
+    setLoading(false);
+    Swal.fire("Error", response.data?.message || "Registration failed", "error");
+  }
+} catch (error) {
+  setLoading(false);
+  const message = error.response?.data?.message || "Something went wrong!";
+  Swal.fire("Error", message, "error");
+}
+};
 
-      console.error("Error during registration:", error.response || error);
-      setErrorMessage(
-        error.response?.data?.message || "Something went wrong. Please try again."
-      );
-      hideLoading(false);
-    }
+  const shsCourses = [
+    { value: "ABM", text: "ABM" },
+    { value: "STEM", text: "STEM" },
+    { value: "HUMSS", text: "HUMSS" },
+  ];
+
+  const collegeDepartments = {
+    "SABM (School of Accountancy, Business, and Management)": [
+      { value: "BSA", text: "(BSA) Bachelor of Science in Accountancy" },
+      { value: "BSBA-FINMGT", text: "(BSBA-FINMGT) BSBA Major in Financial Management" },
+      { value: "BSBA-MKTGMGT", text: "(BSBA-MKTGMGT) BSBA Major in Marketing Management" },
+      { value: "BSTM", text: "(BSTM) BS in Tourism" },
+    ],
+    "SACE (School of Architecture, Computing, and Engineering)": [
+      { value: "BSARCH", text: "(BSARCH) BS in Architecture" },
+      { value: "BSCE", text: "(BSCE) BS in Civil Engineering" },
+      { value: "BSCS", text: "(BSCS) BS in Computer Science" },
+      { value: "BSIT-MWA", text: "(BSIT-MWA) BSIT with Mobile/Web App" },
+    ],
+    "SAHS (School of Allied Health and Science)": [
+      { value: "BSMT", text: "(BSMT) BS in Medical Technology" },
+      { value: "BSN", text: "(BSN) BS in Nursing" },
+      { value: "BSPSY", text: "(BSPSY) BS in Psychology" },
+    ],
   };
+
+  const renderCourses = () => {
+  if (courseType === "SHS") {
+    return shsCourses.map((c) => (
+      <option key={c.value} value={c.value}>
+        {c.text}
+      </option>
+    ));
+  } else if (courseType === "College") {
+    return Object.entries(collegeDepartments).map(([dept, courses]) => (
+      <optgroup key={dept} label={dept}>
+        {courses.map((c) => (
+          <option key={c.value} value={c.value}>
+            {c.text}
+          </option>
+        ))}
+      </optgroup>
+    ));
+  } else {
+    return <option disabled>No courses available</option>;
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-white">
       {loading && <LoadingScreen />}
-      
       <nav className="bg-[#35408E] p-4 flex justify-between items-center px-8">
         <div className="flex items-center space-x-3">
           <img
@@ -171,28 +267,63 @@ export default function Signup() {
             className="w-full border p-2 rounded mb-3"
           />
           
-          <label className="block text-sm font-medium">Student Number*</label>
-          <input
-          required
-          type="text"
-          name="student_number"
-          autoComplete="off"
-          value={formData.student_number}
-          onChange={handleChange}
-          className="w-full border p-2 rounded mb-3"
-          />
+<label className="block text-sm font-medium">Account Type*</label>
+<select
+  required
+  value={courseType}
+  onChange={(e) => {
+    const selected = e.target.value;
+    setCourseType(selected);
 
-          <label className="block text-sm font-medium">Course*</label>
-          <input
-          required
-          type="text"
-          name="course"
-          autoComplete="off"
-          value={formData.course}
-          onChange={handleChange}
-          className="w-full border p-2 rounded mb-3"
-          />
+    let accountType = "";
+    if (selected === "SHS") accountType = "SHS";
+    else if (selected === "College") accountType = "College";
+    else if (selected === "Employee") accountType = "Employee";
 
+    setFormData(prev => ({
+      ...prev,
+      course: "",
+      account_type: accountType, 
+      student_number: selected !== "Employee" ? "" : prev.student_number,
+      employee_id: selected === "Employee" ? prev.employee_id : "",
+    }));
+  }}
+  className="w-full border p-2 rounded mb-3"
+>
+  <option value="">Select Course Type</option>
+  <option value="SHS">SHS</option>
+  <option value="College">College</option>
+  <option value="Employee">Employee</option>
+</select>
+
+
+<label className="block text-sm font-medium">
+  {courseType === "Employee" ? "Employee ID*" : "Student Number*"}
+</label>
+<input
+  required
+  type="text"
+  name={courseType === "Employee" ? "employee_id" : "student_number"}
+  value={courseType === "Employee" ? formData.employee_id : formData.student_number}
+  onChange={handleChange}
+  className="w-full border p-2 rounded mb-3"
+/>
+
+{courseType !== "Employee" && (
+  <>
+    <label className="block text-sm font-medium">Course*</label>
+    <select
+      required
+      name="course"
+      value={formData.course}
+      onChange={handleChange}
+      className="w-full border p-2 rounded mb-3"
+    >
+      <option value="">Select Course</option>
+      {renderCourses()}
+    </select>
+  </>
+)}
 
           
         </div>

@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* index.css or App.css */
+
 @keyframes spin-center {
   0% {
     transform: rotate(0deg);

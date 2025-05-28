@@ -7,11 +7,18 @@ use Illuminate\Http\Request;
 
 class InventoryController extends Controller
 {
-    public function index()
-    {
-        // Return all inventory items wrapped in 'data' for frontend
-        return response()->json(['data' => Inventory::all()]);
+    public function index(Request $request)
+{
+    $query = Inventory::query();
+    
+    // Filter by category if specified
+    if ($request->has('category')) {
+        $query->where('category', $request->category);
     }
+    
+    // Return filtered inventory items
+    return response()->json(['data' => $query->get()]);
+}
 
     public function store(Request $request)
     {
@@ -45,6 +52,31 @@ class InventoryController extends Controller
 
         return response()->json(['message' => 'Updated', 'data' => $inventory], 200);
     }
+
+
+    public function deduct(Request $request)
+{
+    $request->validate([
+        'medicine' => 'required|string',
+        'quantity' => 'required|integer|min:1',
+    ]);
+
+    $item = Inventory::where('name', $request->medicine)->first();
+
+    if (!$item) {
+        return response()->json(['error' => 'Medicine not found'], 404);
+    }
+
+    if ($item->quantity < $request->quantity) {
+        return response()->json(['error' => 'Insufficient stock'], 400);
+    }
+
+    $item->quantity -= $request->quantity;
+    $item->save();
+
+    return response()->json(['message' => 'Stock deducted', 'data' => $item], 200);
+}
+
 
     public function destroy($id)
     {

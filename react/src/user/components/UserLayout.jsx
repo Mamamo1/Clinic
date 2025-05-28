@@ -1,5 +1,5 @@
 import React from 'react';
-import Navbar from '../components/Navbar'; // or wherever your navbar is
+import Navbar from './Navbar'; // or wherever your navbar is
 import { Outlet } from 'react-router-dom';
 
 const UserLayout = () => {

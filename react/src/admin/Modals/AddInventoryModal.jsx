@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const AddInventoryModal = ({ activeTab, form, setForm, onSave, onClose }) => {
+  const [isSaving, setIsSaving] = useState(false); // prevent double submission
+
   const isFormValid = () => {
     if (activeTab === 'Medicine') {
       return form.generic && form.brand_name && form.dosage && form.quantity && form.threshold;
@@ -8,12 +10,20 @@ const AddInventoryModal = ({ activeTab, form, setForm, onSave, onClose }) => {
     return form.name && form.quantity && form.threshold;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!isFormValid()) {
       alert('Please fill in all fields before submitting.');
       return;
     }
-    onSave();
+
+    if (isSaving) return; // prevent further clicks
+
+    setIsSaving(true);
+    try {
+      await onSave(); // assuming onSave is async-safe
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -27,7 +37,7 @@ const AddInventoryModal = ({ activeTab, form, setForm, onSave, onClose }) => {
         </button>
         <h2 className="text-2xl font-bold text-gray-800 mb-6">Add {activeTab}</h2>
 
-        <form className="space-y-4">
+        <form className="space-y-4" autoComplete="off">
           {activeTab === 'Medicine' ? (
             <>
               <div>
@@ -107,9 +117,12 @@ const AddInventoryModal = ({ activeTab, form, setForm, onSave, onClose }) => {
             <button
               type="button"
               onClick={handleSave}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+              disabled={isSaving}
+              className={`px-4 py-2 rounded-lg transition ${
+                isSaving ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+              } text-white`}
             >
-              Save
+              {isSaving ? 'Saving...' : 'Save'}
             </button>
           </div>
         </form>

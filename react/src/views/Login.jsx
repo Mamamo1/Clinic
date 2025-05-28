@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { useLoading } from '../components/LoadingContext'; 
+import { useLoading } from "../user/components/LoadingContext";
 import '../index.css';
 
 export default function Login() {
@@ -19,19 +19,34 @@ export default function Login() {
 
   // Check if user is logged in and redirect based on account type
   useEffect(() => {
-    const userToken = localStorage.getItem('auth_token');
-    const accountType = localStorage.getItem('account_type');
-    
-    if (userToken) {
-      if (accountType === 'Super Admin') {
-        navigate('/admin-dashboard');
-      } else if (accountType === 'Admin_Nurse') {
+  const userToken = localStorage.getItem('auth_token');
+  const accountType = localStorage.getItem('account_type');
+
+  if (userToken) {
+    switch (accountType) {
+      case 'SuperAdmin':
         navigate('/admin');
-      } else {
+        break;
+      case 'Doctor':
+        navigate('/doctor');
+        break;
+      case 'Nurse':
+        navigate('/nurse');
+        break;
+      case 'Dentist':
+        navigate('/dentist');
+        break;
+      case 'SHS':
+      case 'College':
+      case 'Employee':
         navigate('/user');
-      }
+        break;
+      default:
+        navigate('/user');
     }
-  }, [navigate]);
+  }
+}, [navigate]);
+
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -63,19 +78,32 @@ export default function Login() {
       hideLoading(); // Hide global loading state
 
       if (response.data.success) {
+        const accountType = response.data.user.account_type;
         // Save token and account type in localStorage
         localStorage.setItem('auth_token', response.data.token);
-        localStorage.setItem('account_type', response.data.user.account_type);
-        localStorage.setItem('first_name', response.data.user.first_name); // Save the account type
+        localStorage.setItem('account_type', accountType);
+        localStorage.setItem('first_name', response.data.user.first_name);
 
-        // Redirect based on account type
-        if (response.data.user.account_type === 'Super Admin') {
-          navigate('/admin-dashboard');
-        } else if (response.data.user.account_type === 'Admin_Nurse') {
-          navigate('/admin');
-        } else {
-          navigate('/user');
-        }
+// Redirect based on account type
+switch (accountType) {
+  case 'SuperAdmin':
+    navigate('/admin');
+    break;
+  case 'Doctor':
+    navigate('/doctor');
+    break;
+  case 'Nurse':
+    navigate('/nurse');
+    break;
+  case 'Dentist':
+    navigate('/dentist');
+    break;
+  case 'SHS':
+  case 'College':
+  case 'Employee':
+    navigate('/user');
+    break;
+}
       } else {
         // Specific error handling for invalid email or password
         if (response.data.error === 'Invalid email') {

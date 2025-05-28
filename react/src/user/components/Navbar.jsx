@@ -8,8 +8,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
-import '../index.css';
-import { capitalizeWords } from '../utils';
+import '../../index.css';
+import { capitalizeWords } from '../../utils';
 
 export default function UserDashboard() {
   const navigate = useNavigate();

@@ -14,43 +14,56 @@ const UserManagement = () => {
   const USERS_PER_PAGE = 6;
 
   useEffect(() => {
-    const auth_token = localStorage.getItem('auth_token');
+  const auth_token = localStorage.getItem('auth_token');
+  axios
+    .get('http://localhost:8000/api/users', {
+      headers: {
+        Authorization: `Bearer ${auth_token}`,
+      },
+    })
+    .then(response => {
+      console.log('API response:', response.data);
 
-    axios
-      .get('http://localhost:8000/api/users', {
-        headers: {
-          Authorization: `Bearer ${auth_token}`,
-        },
-      })
-      .then(response => {
-        const usersData = response.data.map(user => {
-          return Object.fromEntries(
-            Object.entries(user).map(([key, value]) => {
-              if (typeof value === 'string') {
-                return [key, capitalizeWords(value)];
-              }
-              return [key, value];
-            })
-          );
-        });
-        setUsers(usersData);
-        setFilteredUsers(usersData);
-      })
-      .catch(error => {
-        console.error('Error fetching users:', error);
+      const usersList = response.data.data;  
+
+      if (!Array.isArray(usersList)) {
+        throw new Error('Users data is not an array');
+      }
+
+      const usersData = usersList.map(user => {
+        const normalizedUser = {
+          ...user,
+          account_type: user.account_type?.toLowerCase() || '',
+          first_name: capitalizeWords(user.first_name),
+          middle_name: capitalizeWords(user.middle_name || ''),
+          last_name: capitalizeWords(user.last_name),
+          course: capitalizeWords(user.course || ''),
+          city: capitalizeWords(user.city || ''),
+          state: capitalizeWords(user.state || ''),
+          street: capitalizeWords(user.street || ''),
+        };
+        return normalizedUser;
       });
-  }, []);
+      setUsers(usersData);
+      setFilteredUsers(usersData);
+    })
+    .catch(error => {
+      console.error('Error fetching users:', error);
+    });
+}, []);
 
   // Filter by search term
   useEffect(() => {
     if (!searchTerm) {
       setFilteredUsers(users);
     } else {
+      const lowerSearch = searchTerm.toLowerCase();
       const filtered = users.filter(user => {
         const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
         return (
-          fullName.includes(searchTerm.toLowerCase()) ||
-          (user.student_number && user.student_number.toLowerCase().includes(searchTerm.toLowerCase()))
+          fullName.includes(lowerSearch) ||
+          (user.student_number && user.student_number.toLowerCase().includes(lowerSearch)) ||
+          (user.employee_id && user.employee_id.toLowerCase().includes(lowerSearch))
         );
       });
       setFilteredUsers(filtered);
@@ -58,15 +71,30 @@ const UserManagement = () => {
     setCurrentPage(1);
   }, [searchTerm, users]);
 
-  const handleFilter = (filter) => {
-    setActiveFilter(filter);
-    if (filter === 'All') {
-      setFilteredUsers(users);
-    } else {
-      setFilteredUsers(users.filter(user => user.level === filter));
-    }
-    setCurrentPage(1);
+
+    const filterGroups = {
+    All: ['shs', 'college', 'employee'],
+    Staff: ['doctor', 'nurse', 'dentist'],
+    SHS: ['shs'],
+    College: ['college'],
+    Employee: ['employee'],
   };
+  // Filter by account_type (level)
+  const handleFilter = (filter) => {
+  setActiveFilter(filter);
+
+  if (filter === 'All' || filter === 'Staff') {
+    // filter by group
+    const filtered = users.filter(user =>
+      filterGroups[filter].includes(user.account_type)
+    );
+    setFilteredUsers(filtered); 
+  } else {
+    // single filter
+    setFilteredUsers(users.filter(user => user.account_type === filter.toLowerCase()));
+  }
+  setCurrentPage(1);
+};
 
   const paginatedUsers = filteredUsers.slice(
     (currentPage - 1) * USERS_PER_PAGE,
@@ -82,7 +110,7 @@ const UserManagement = () => {
       {/* Search Input */}
       <input
         type="text"
-        placeholder="Search by name or student ID..."
+        placeholder="Search by name or student/employee ID..."
         value={searchTerm}
         onChange={e => setSearchTerm(e.target.value)}
         className="mb-4 w-full max-w-md px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-nu-blue"
@@ -90,7 +118,7 @@ const UserManagement = () => {
 
       {/* Filters */}
       <div className="mb-6 flex gap-3">
-        {['All', 'Student', 'Faculty'].map(level => (
+        {['All', 'SHS', 'College', 'Employee', 'Staff'].map(level => (
           <button
             key={level}
             onClick={() => handleFilter(level)}
@@ -105,6 +133,7 @@ const UserManagement = () => {
         ))}
       </div>
 
+
       {/* User Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {paginatedUsers.map(user => (
@@ -115,10 +144,12 @@ const UserManagement = () => {
               </div>
               <div>
                 <p className="font-semibold text-lg text-nu-blue">{user.first_name} {user.last_name}</p>
-                <p className="text-sm text-gray-600">Student ID: {user.student_number}</p>
+                <p className="text-sm text-gray-600">
+                  {user.account_type === 'employee' ? 'Employee ID' : 'Student ID'}: {user.account_type === 'employee' ? (user.employee_id || 'N/A') : (user.student_number || 'N/A')}
+                </p>
               </div>
             </div>
-            <p className="text-sm text-gray-700">📘 {user.course}</p>
+            <p className="text-sm text-gray-700">📘 {user.course || 'N/A'}</p>
             <p className="text-sm text-gray-700">🗓 Last Visit: {user.last_visit || 'N/A'}</p>
             <button
               className="text-nu-blue mt-4 font-medium hover:underline"
@@ -169,9 +200,9 @@ const UserManagement = () => {
             {selectedUser && (
               <div className="space-y-2 text-gray-800">
                 <p><strong>Name:</strong> {selectedUser.first_name} {selectedUser.middle_name} {selectedUser.last_name}</p>
-                <p><strong>Student ID:</strong> {selectedUser.student_number}</p>
+                <p><strong>{selectedUser.account_type === 'employee' ? 'Employee ID' : 'Student ID'}:</strong> {selectedUser.account_type === 'employee' ? selectedUser.employee_id : selectedUser.student_number}</p>
                 <p><strong>Email:</strong> {selectedUser.email}</p>
-                <p><strong>Course:</strong> {selectedUser.course}</p>
+                <p><strong>Course:</strong> {selectedUser.course || 'N/A'}</p>
                 <p><strong>Mobile:</strong> {selectedUser.mobile}</p>
                 <p><strong>Emergency Contact:</strong> {selectedUser.mobile}</p>
                 <p><strong>Address:</strong> {selectedUser.street}, {selectedUser.city}, {selectedUser.state}, {selectedUser.zipcode}</p>

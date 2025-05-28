@@ -9,7 +9,7 @@ export default {
       colors: {
         'nu-blue': '#0033A0',
         'nu-gold': '#FFC72C',
-      },
+      },  
     },
   },
   plugins: [
