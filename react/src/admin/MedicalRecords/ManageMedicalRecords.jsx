@@ -12,13 +12,14 @@ const Spinner = () => (
 );
 
 const ManageMedicalRecords = () => {
-   const navigate = useNavigate();
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [navigating, setNavigating] = useState(false);
 
   const itemsPerPage = 6;
 
@@ -58,7 +59,7 @@ const ManageMedicalRecords = () => {
   }, []);
 
   const filtered = users.filter(user => {
-    if (user.account_type === 'SuperAdmin') return false; // exclude SuperAdmin
+    if (user.account_type === 'SuperAdmin') return false;
 
     const isStaff = ['Doctor', 'Nurse', 'Dentist'].includes(user.account_type);
     const matchFilter =
@@ -77,12 +78,12 @@ const ManageMedicalRecords = () => {
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginated = filtered.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
-  if (loading) return <Spinner />;
+  if (loading || navigating) return <Spinner />;
   if (error) return <div className="p-6 text-red-600">Error: {error}</div>;
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
-      <h1 className="text-3xl font-bold text-blue-900 mb-4">User Management</h1>
+      <h1 className="text-3xl font-bold text-blue-900 mb-4">Manage Medical Records</h1>
 
       <input
         className="w-full p-3 rounded-md border mb-4"
@@ -134,7 +135,10 @@ const ManageMedicalRecords = () => {
               <div className="text-sm text-gray-700 mb-2">📅 Last Visit: {user.last_visit || 'N/A'}</div>
               <button
                 className="text-nu-blue mt-4 font-medium hover:underline"
-                onClick={() => navigate(`/admin/MedicalRecords/UserDetail/${user.id}`)}
+                onClick={() => {
+                  setNavigating(true);
+                  navigate(`/admin/MedicalRecords/UserDetail/${user.id}`);
+                }}
                 style={{
                   backgroundColor: '#f0f4ff',
                   color: '#1e40af',
@@ -150,7 +154,6 @@ const ManageMedicalRecords = () => {
         )}
       </div>
 
-      {/* Pagination */}
       {paginated.length > 0 && (
         <div className="flex justify-center items-center gap-2 mt-6">
           <button
@@ -178,7 +181,6 @@ const ManageMedicalRecords = () => {
           </button>
         </div>
       )}
-
     </div>
   );
 };

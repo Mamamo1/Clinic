@@ -1,169 +1,178 @@
-import { useState, useEffect } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
-import { FaUserPlus } from "react-icons/fa";
-import axios from "axios"; 
-import Swal from "sweetalert2";
-import LoadingScreen from "../user/components/LoadingScreen";
+"use client"
 
+import { useState, useEffect } from "react"
+import { NavLink, useNavigate } from "react-router-dom"
+import { FaUserPlus } from "react-icons/fa"
+import axios from "axios"
+import Swal from "sweetalert2"
+import LoadingScreen from "../user/components/LoadingScreen"
 
 export default function Signup() {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
-    firstName: '',
-    middleName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    password_confirmation: '',
-    student_number: '',
-    employee_id: '',
-    course: '',
-    dob: '',
-    mobile: '',
-    gender: '',
-    nationality: 'Filipino',
-    salutation: '',
-    street: '',
-    city: '',
-    state: '',
-    zipcode: '',
-    telephone: '',
-    account_type: ''
-  });
+    firstName: "",
+    middleName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    password_confirmation: "",
+    student_number: "",
+    employee_id: "",
+    course: "",
+    dob: "",
+    mobile: "",
+    gender: "",
+    nationality: "Filipino",
+    salutation: "",
+    street: "",
+    city: "",
+    state: "",
+    zipcode: "",
+    telephone: "",
+    account_type: "",
+  })
 
-  const [role, setRole] = useState("");
-  const [courseType, setCourseType] = useState("");
-  const [agreeToTerms, setAgreeToTerms] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-
+  const [role, setRole] = useState("")
+  const [courseType, setCourseType] = useState("")
+  const [agreeToTerms, setAgreeToTerms] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    const userToken = localStorage.getItem("auth_token");
+    const userToken = localStorage.getItem("auth_token")
     if (userToken) {
-      navigate("/user");
+      navigate("/user")
     }
-  }, [navigate]);
+  }, [navigate])
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value } = e.target
     setFormData((prevData) => ({
       ...prevData,
       [name]: value,
-    }));
-  };
+    }))
+  }
 
   const handleRoleChange = (e) => {
-  const selectedRole = e.target.value;
-  setRole(selectedRole);
+    const selectedRole = e.target.value
+    setRole(selectedRole)
 
-  let newCourseType = "";
-  let accountType = "";
+    let newCourseType = ""
+    let accountType = ""
 
-  if (selectedRole === "Employee") {
-    newCourseType = "Employee";
-    accountType = "Employee";
-  } else if (selectedRole === "Student") {
-    newCourseType = "SHS";
-    accountType = "SHS";
-  } else {
-    newCourseType = "College";
-    accountType = "College";
+    if (selectedRole === "Employee") {
+      newCourseType = "Employee"
+      accountType = "Employee"
+    } else if (selectedRole === "Student") {
+      newCourseType = "SHS"
+      accountType = "SHS"
+    } else {
+      newCourseType = "College"
+      accountType = "College"
+    }
+
+    setCourseType(newCourseType)
+
+    setFormData((prev) => ({
+      ...prev,
+      account_type: accountType,
+      student_number: "",
+      employee_id: "",
+      course: "",
+    }))
   }
-
-  setCourseType(newCourseType);
-
-  setFormData((prev) => ({
-    ...prev,
-    account_type: accountType,
-    student_number: '',
-    employee_id: '',
-    course: '',
-  }));
-};
-
-
-
 
   const handleCheckboxChange = () => {
-    setAgreeToTerms((prev) => !prev);
-  };
+    setAgreeToTerms((prev) => !prev)
+  }
 
   const validateForm = () => {
-  if (formData.password !== formData.password_confirmation) {
-    return "Passwords do not match";
-  }
-  if (!agreeToTerms) {
-    return "You must agree to the terms and conditions.";
-  }
-  if (role === "Student" && !formData.student_number.trim()) {
-    return "Student Number is required for Students.";
-  }
-  if (role === "Employee" && !formData.employee_id.trim()) {
-    return "Employee ID is required for Employees.";
-  }
-  return "";
-};
-  
-
-    const handleSubmit = async (e) => {
-  e.preventDefault();
-
-  const validationError = validateForm();
-  if (validationError) {
-    Swal.fire("Error", validationError, "error");
-    return;
+    if (formData.password !== formData.password_confirmation) {
+      return "Passwords do not match"
+    }
+    if (!agreeToTerms) {
+      return "You must agree to the terms and conditions."
+    }
+    if (role === "Student" && !formData.student_number.trim()) {
+      return "Student Number is required for Students."
+    }
+    if (role === "Employee" && !formData.employee_id.trim()) {
+      return "Employee ID is required for Employees."
+    }
+    return ""
   }
 
-  setLoading(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault()
 
-  const payload = {
-    salutation: formData.salutation?.trim(),
-    first_name: formData.firstName?.trim(),
-    middle_name: formData.middleName?.trim(),
-    last_name: formData.lastName?.trim(),
-    email: formData.email?.trim(),
-    password: formData.password,
-    password_confirmation: formData.password_confirmation,
-    employee_id: formData.employee_id?.trim(),
-    student_number: formData.student_number?.trim(),
-    course: formData.course?.trim(),
-    dob: formData.dob,
-    mobile: formData.mobile?.trim(),
-    gender: formData.gender,
-    nationality: formData.nationality,
-    street: formData.street?.trim(),
-    city: formData.city?.trim(),
-    state: formData.state?.trim(),
-    zipcode: formData.zipcode?.trim(),
-    telephone: formData.telephone?.trim(),
-    account_type: formData.account_type,
-  };
+    const validationError = validateForm()
+    if (validationError) {
+      Swal.fire("Error", validationError, "error")
+      return
+    }
 
-  try {
-  const response = await axios.post("http://localhost:8000/api/signup", payload);
+    setLoading(true)
 
-  if (response.data?.success === true) {
-    setLoading(false);
-    Swal.fire("Success", "Registration successful! You can now log in.", "success").then(() => {
-      navigate("/login");
-    });
-  } else {
-    setLoading(false);
-    Swal.fire("Error", response.data?.message || "Registration failed", "error");
+    // Build payload conditionally - only include fields that have values
+    const payload = {
+      salutation: formData.salutation?.trim(),
+      first_name: formData.firstName?.trim(),
+      middle_name: formData.middleName?.trim(),
+      last_name: formData.lastName?.trim(),
+      email: formData.email?.trim(),
+      password: formData.password,
+      password_confirmation: formData.password_confirmation,
+      dob: formData.dob,
+      mobile: formData.mobile?.trim(),
+      gender: formData.gender,
+      nationality: formData.nationality,
+      street: formData.street?.trim(),
+      city: formData.city?.trim(),
+      state: formData.state?.trim(),
+      zipcode: formData.zipcode?.trim(),
+      telephone: formData.telephone?.trim(),
+      account_type: formData.account_type,
+    }
+
+    // Only include student_number if it's not empty (for students)
+    if (formData.student_number?.trim()) {
+      payload.student_number = formData.student_number.trim()
+    }
+
+    // Only include employee_id if it's not empty (for employees)
+    if (formData.employee_id?.trim()) {
+      payload.employee_id = formData.employee_id.trim()
+    }
+
+    // Only include course if it's not empty (for students)
+    if (formData.course?.trim()) {
+      payload.course = formData.course.trim()
+    }
+
+    try {
+      const response = await axios.post("http://localhost:8000/api/signup", payload)
+
+      if (response.data?.success === true) {
+        setLoading(false)
+        Swal.fire("Success", "Registration successful! You can now log in.", "success").then(() => {
+          navigate("/login")
+        })
+      } else {
+        setLoading(false)
+        Swal.fire("Error", response.data?.message || "Registration failed", "error")
+      }
+    } catch (error) {
+      setLoading(false)
+      const message = error.response?.data?.message || "Something went wrong!"
+      Swal.fire("Error", message, "error")
+    }
   }
-} catch (error) {
-  setLoading(false);
-  const message = error.response?.data?.message || "Something went wrong!";
-  Swal.fire("Error", message, "error");
-}
-};
 
   const shsCourses = [
     { value: "ABM", text: "ABM" },
     { value: "STEM", text: "STEM" },
     { value: "HUMSS", text: "HUMSS" },
-  ];
+  ]
 
   const collegeDepartments = {
     "SABM (School of Accountancy, Business, and Management)": [
@@ -183,30 +192,29 @@ export default function Signup() {
       { value: "BSN", text: "(BSN) BS in Nursing" },
       { value: "BSPSY", text: "(BSPSY) BS in Psychology" },
     ],
-  };
+  }
 
   const renderCourses = () => {
-  if (courseType === "SHS") {
-    return shsCourses.map((c) => (
-      <option key={c.value} value={c.value}>
-        {c.text}
-      </option>
-    ));
-  } else if (courseType === "College") {
-    return Object.entries(collegeDepartments).map(([dept, courses]) => (
-      <optgroup key={dept} label={dept}>
-        {courses.map((c) => (
-          <option key={c.value} value={c.value}>
-            {c.text}
-          </option>
-        ))}
-      </optgroup>
-    ));
-  } else {
-    return <option disabled>No courses available</option>;
+    if (courseType === "SHS") {
+      return shsCourses.map((c) => (
+        <option key={c.value} value={c.value}>
+          {c.text}
+        </option>
+      ))
+    } else if (courseType === "College") {
+      return Object.entries(collegeDepartments).map(([dept, courses]) => (
+        <optgroup key={dept} label={dept}>
+          {courses.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.text}
+            </option>
+          ))}
+        </optgroup>
+      ))
+    } else {
+      return <option disabled>No courses available</option>
+    }
   }
-};
-
 
   return (
     <div className="min-h-screen bg-white">
@@ -229,7 +237,7 @@ export default function Signup() {
 
       <form
         className="max-w-7xl mx-auto bg-white shadow-md p-8 grid grid-cols-1 md:grid-cols-2 gap-8"
-         autoComplete="off"
+        autoComplete="off"
         onSubmit={handleSubmit}
       >
         {/* User Credentials */}
@@ -266,66 +274,63 @@ export default function Signup() {
             onChange={handleChange}
             className="w-full border p-2 rounded mb-3"
           />
-          
-<label className="block text-sm font-medium">Account Type*</label>
-<select
-  required
-  value={courseType}
-  onChange={(e) => {
-    const selected = e.target.value;
-    setCourseType(selected);
 
-    let accountType = "";
-    if (selected === "SHS") accountType = "SHS";
-    else if (selected === "College") accountType = "College";
-    else if (selected === "Employee") accountType = "Employee";
+          <label className="block text-sm font-medium">Account Type*</label>
+          <select
+            required
+            value={courseType}
+            onChange={(e) => {
+              const selected = e.target.value
+              setCourseType(selected)
 
-    setFormData(prev => ({
-      ...prev,
-      course: "",
-      account_type: accountType, 
-      student_number: selected !== "Employee" ? "" : prev.student_number,
-      employee_id: selected === "Employee" ? prev.employee_id : "",
-    }));
-  }}
-  className="w-full border p-2 rounded mb-3"
->
-  <option value="">Select Course Type</option>
-  <option value="SHS">SHS</option>
-  <option value="College">College</option>
-  <option value="Employee">Employee</option>
-</select>
+              let accountType = ""
+              if (selected === "SHS") accountType = "SHS"
+              else if (selected === "College") accountType = "College"
+              else if (selected === "Employee") accountType = "Employee"
 
+              setFormData((prev) => ({
+                ...prev,
+                course: "",
+                account_type: accountType,
+                student_number: selected !== "Employee" ? "" : prev.student_number,
+                employee_id: selected === "Employee" ? prev.employee_id : "",
+              }))
+            }}
+            className="w-full border p-2 rounded mb-3"
+          >
+            <option value="">Select Course Type</option>
+            <option value="SHS">SHS</option>
+            <option value="College">College</option>
+            <option value="Employee">Employee</option>
+          </select>
 
-<label className="block text-sm font-medium">
-  {courseType === "Employee" ? "Employee ID*" : "Student Number*"}
-</label>
-<input
-  required
-  type="text"
-  name={courseType === "Employee" ? "employee_id" : "student_number"}
-  value={courseType === "Employee" ? formData.employee_id : formData.student_number}
-  onChange={handleChange}
-  className="w-full border p-2 rounded mb-3"
-/>
+          <label className="block text-sm font-medium">
+            {courseType === "Employee" ? "Employee ID*" : "Student Number*"}
+          </label>
+          <input
+            required
+            type="text"
+            name={courseType === "Employee" ? "employee_id" : "student_number"}
+            value={courseType === "Employee" ? formData.employee_id : formData.student_number}
+            onChange={handleChange}
+            className="w-full border p-2 rounded mb-3"
+          />
 
-{courseType !== "Employee" && (
-  <>
-    <label className="block text-sm font-medium">Course*</label>
-    <select
-      required
-      name="course"
-      value={formData.course}
-      onChange={handleChange}
-      className="w-full border p-2 rounded mb-3"
-    >
-      <option value="">Select Course</option>
-      {renderCourses()}
-    </select>
-  </>
-)}
-
-          
+          {courseType !== "Employee" && (
+            <>
+              <label className="block text-sm font-medium">Course*</label>
+              <select
+                required
+                name="course"
+                value={formData.course}
+                onChange={handleChange}
+                className="w-full border p-2 rounded mb-3"
+              >
+                <option value="">Select Course</option>
+                {renderCourses()}
+              </select>
+            </>
+          )}
         </div>
 
         {/* Basic Information */}
@@ -375,7 +380,6 @@ export default function Signup() {
             onChange={handleChange}
             className="w-full border p-2 rounded mb-3"
           />
-          
 
           <label className="block text-sm font-medium">Gender*</label>
           <select
@@ -487,16 +491,10 @@ export default function Signup() {
         {/* Terms and Buttons */}
         <div className="md:col-span-2">
           <div className="flex items-center gap-2 mb-4">
-            <input
-              type="checkbox"
-              checked={agreeToTerms}
-              onChange={handleCheckboxChange}
-            />
+            <input type="checkbox" checked={agreeToTerms} onChange={handleCheckboxChange} />
             <label className="text-sm">
               I agree to the{" "}
-              <span className="text-blue-500 underline cursor-pointer">
-                NU CARES: Service Terms & Conditions
-              </span>
+              <span className="text-blue-500 underline cursor-pointer">NU CARES: Service Terms & Conditions</span>
             </label>
           </div>
 
@@ -504,20 +502,13 @@ export default function Signup() {
 
           <div className="flex gap-4">
             <div className="flex flex-col justify-center items-center">
-            <button
-              type="submit"
-              className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
-              
-            >
-              {"Register"}
-            </button>
+              <button type="submit" className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
+                Register
+              </button>
             </div>
 
             <NavLink to="/login">
-              <button
-                type="button"
-                className="bg-yellow-400 text-white px-6 py-2 rounded hover:bg-yellow-500"
-              >
+              <button type="button" className="bg-yellow-400 text-white px-6 py-2 rounded hover:bg-yellow-500">
                 Cancel
               </button>
             </NavLink>
@@ -525,5 +516,5 @@ export default function Signup() {
         </div>
       </form>
     </div>
-  );
+  )
 }

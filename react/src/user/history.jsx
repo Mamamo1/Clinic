@@ -68,9 +68,6 @@ export default function ConsultationHistory() {
             <div key={record.id} className="bg-white rounded-md border border-gray-200 shadow-sm p-5">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-medium text-gray-800">{record.type}</h2>
-                <span className="bg-blue-100 text-blue-700 text-sm px-2 py-1 rounded-md">
-                  {record.status}
-                </span>
               </div>
 
               <div className="flex justify-between text-sm mt-2 text-gray-600">
@@ -79,9 +76,6 @@ export default function ConsultationHistory() {
                 </p>
                 <p>
                   <span className="font-semibold">Doctor:</span> {record.doctor}
-                </p>
-                <p>
-                  <span className="font-semibold">Department:</span> {record.department}
                 </p>
               </div>
 

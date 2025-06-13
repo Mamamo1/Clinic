@@ -18,7 +18,7 @@ const PendingRequirements = () => {
       {/* Title */}
       <div className="flex items-center justify-center mb-6">
         <InformationCircleIcon className="w-6 h-6 mr-2" />
-        <h1 className="text-2xl font-bold">Pending Requirements</h1>
+        <h1 className="text-2xl font-bold">Pending Medical Requirements</h1>
       </div>
 
       {/* Table */}

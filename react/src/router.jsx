@@ -20,6 +20,7 @@ import AdminLayout from './admin/components/AdminLayout';
 import InventorySystem from './admin/InventorySystem';
 import ManageMedicalRecords from './admin/MedicalRecords/ManageMedicalRecords';
 import UserDetail from './admin/MedicalRecords/UserDetail';
+import Navbar from './doctor/Navbar';
 
 
 const router = createBrowserRouter([
@@ -91,6 +92,17 @@ const router = createBrowserRouter([
         ],
       },
     ],
+  },
+  
+  {
+    path: '/doctor',
+    element: <Navbar />,
+    children: [
+      {
+        index: true,
+        element: <Navbar />,
+      },
+    ]
   },
 ]);
 

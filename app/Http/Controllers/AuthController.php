@@ -99,39 +99,40 @@ class AuthController extends Controller
     /**
      * Return authenticated user's full info.
      */
-    public function userInfo(Request $request): JsonResponse
-    {
-        try {
-            $user = $request->user();
+   public function userInfo(Request $request): JsonResponse
+{
+    try {
+        $user = $request->user();
 
-            if (!$user) {
-                return $this->sendError('Unauthenticated', 401);
-            }
-
-            return $this->sendResponse([
-                'id' => $user->id,
-                'first_name' => $user->first_name,
-                'middle_name' => $user->middle_name,
-                'last_name' => $user->last_name,
-                'salutation' => $user->salutation,
-                'gender' => $user->gender,
-                'date_of_birth' => $user->date_of_birth,
-                'email' => $user->email,
-                'student_number' => $user->student_number,
-                'course' => $user->course,
-                'employee_id' => $user->employee_id,
-                'mobile' => $user->mobile,
-                'telephone' => $user->telephone,
-                'zipcode' => $user->zipcode,
-                'state' => $user->state,
-                'city' => $user->city,
-                'street' => $user->street,
-                'account_type' => $user->account_type,
-            ]);
-        } catch (\Throwable $e) {
-            return $this->sendError('Server error: ' . $e->getMessage(), 500);
+        if (!$user) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
         }
+
+        return response()->json([
+            'id' => $user->id,
+            'first_name' => $user->first_name,
+            'middle_name' => $user->middle_name,
+            'last_name' => $user->last_name,
+            'salutation' => $user->salutation,
+            'gender' => $user->gender,
+            'date_of_birth' => $user->date_of_birth,
+            'email' => $user->email,
+            'student_number' => $user->student_number,
+            'course' => $user->course,
+            'employee_id' => $user->employee_id,
+            'mobile' => $user->mobile,
+            'telephone' => $user->telephone,
+            'zipcode' => $user->zipcode,
+            'state' => $user->state,
+            'city' => $user->city,
+            'street' => $user->street,
+            'account_type' => $user->account_type,
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json(['error' => 'Server error: ' . $e->getMessage()], 500);
     }
+}
+
 
     /**
      * Return all users (restricted to Super Admin and Admin_Nurse).

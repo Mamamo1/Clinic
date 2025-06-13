@@ -42,7 +42,7 @@ export default function UserDashboard() {
           />
           <Card
             icon={<Info className="h-8 w-8 text-black" />}
-            title="Pending Records"
+            title="Pending Medical Requirements"
             subtitle="Track pending medical records and submit missing information."
             onClick={() => navigate("/user/pending")}
           />
