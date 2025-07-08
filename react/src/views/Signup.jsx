@@ -1,14 +1,112 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { NavLink, useNavigate } from "react-router-dom"
-import { FaUserPlus } from "react-icons/fa"
+import { FaUserPlus, FaCheck, FaExclamationCircle, FaStethoscope, FaGraduationCap } from "react-icons/fa"
 import axios from "axios"
 import Swal from "sweetalert2"
-import LoadingScreen from "../user/components/LoadingScreen"
 
-export default function Signup() {
+const LoadingScreen = () => (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white p-6 rounded-lg shadow-2xl">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-800 mx-auto"></div>
+      <p className="mt-4 text-center text-blue-800 font-medium">Processing Registration...</p>
+    </div>
+  </div>
+)
+
+// Move InputField component OUTSIDE to prevent recreation on every render
+const InputField = ({
+  label,
+  name,
+  type = "text",
+  required = false,
+  options = null,
+  children = null,
+  onChange,
+  value,
+  hasError,
+  isValid,
+  errorMessage,
+  ...props
+}) => {
+  return (
+    <div className="mb-6">
+      <label className="block text-sm font-semibold text-blue-900 mb-2">
+        {label}
+        {required && <span className="text-yellow-600 ml-1 text-lg font-bold">*</span>}
+      </label>
+      {type === "select" ? (
+        <select
+          name={name}
+          value={value}
+          onChange={onChange}
+          className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-3 focus:ring-yellow-400 focus:border-blue-800 transition-all duration-200 ${
+            hasError
+              ? "border-red-500 bg-red-50"
+              : isValid
+                ? "border-green-500 bg-green-50"
+                : "border-blue-200 bg-white hover:border-blue-400"
+          }`}
+          {...props}
+        >
+          {options &&
+            options.map((option, index) => (
+              <option key={index} value={option.value || option}>
+                {option.text || option}
+              </option>
+            ))}
+          {children}
+        </select>
+      ) : type === "textarea" ? (
+        <textarea
+          name={name}
+          value={value}
+          onChange={onChange}
+          className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-3 focus:ring-yellow-400 focus:border-blue-800 transition-all duration-200 resize-none ${
+            hasError
+              ? "border-red-500 bg-red-50"
+              : isValid
+                ? "border-green-500 bg-green-50"
+                : "border-blue-200 bg-white hover:border-blue-400"
+          }`}
+          {...props}
+        />
+      ) : (
+        <input
+          type={type}
+          name={name}
+          value={value}
+          onChange={onChange}
+          className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-3 focus:ring-yellow-400 focus:border-blue-800 transition-all duration-200 ${
+            hasError
+              ? "border-red-500 bg-red-50"
+              : isValid
+                ? "border-green-500 bg-green-50"
+                : "border-blue-200 bg-white hover:border-blue-400"
+          }`}
+          {...props}
+        />
+      )}
+      {hasError && (
+        <div className="flex items-center mt-2 text-red-600 text-sm font-medium">
+          <FaExclamationCircle className="mr-2 text-base" />
+          {errorMessage}
+        </div>
+      )}
+      {isValid && (
+        <div className="flex items-center mt-2 text-green-600 text-sm font-medium">
+          <FaCheck className="mr-2 text-base" />
+          Looks good!
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function NUSignupForm() {
   const navigate = useNavigate()
+  const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState({
     firstName: "",
     middleName: "",
@@ -32,11 +130,11 @@ export default function Signup() {
     account_type: "",
   })
 
-  const [role, setRole] = useState("")
   const [courseType, setCourseType] = useState("")
   const [agreeToTerms, setAgreeToTerms] = useState(false)
-  const [errorMessage, setErrorMessage] = useState("")
   const [loading, setLoading] = useState(false)
+  const [validationErrors, setValidationErrors] = useState({})
+  const [touchedFields, setTouchedFields] = useState({})
 
   useEffect(() => {
     const userToken = localStorage.getItem("auth_token")
@@ -45,69 +143,221 @@ export default function Signup() {
     }
   }, [navigate])
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }))
-  }
+  // Real-time validation
+  const validateField = useCallback(
+    (name, value) => {
+      const errors = {}
 
-  const handleRoleChange = (e) => {
-    const selectedRole = e.target.value
-    setRole(selectedRole)
+      switch (name) {
+        case "email":
+          if (!value.trim()) {
+            errors.email = "Email is required"
+          } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+            errors.email = "Please enter a valid email address"
+          }
+          break
 
-    let newCourseType = ""
+        case "password":
+          if (!value) {
+            errors.password = "Password is required"
+          } else if (value.length < 8) {
+            errors.password = "Password must be at least 8 characters long"
+          }
+          break
+
+        case "password_confirmation":
+          if (!value) {
+            errors.password_confirmation = "Please confirm your password"
+          } else if (value !== formData.password) {
+            errors.password_confirmation = "Passwords do not match"
+          }
+          break
+
+        case "firstName":
+        case "lastName":
+          if (!value.trim()) {
+            errors[name] = `${name === "firstName" ? "First" : "Last"} name is required`
+          }
+          break
+
+        case "student_number":
+          if (courseType !== "Employee" && !value.trim()) {
+            errors.student_number = "Student number is required"
+          }
+          break
+
+        case "employee_id":
+          if (courseType === "Employee" && !value.trim()) {
+            errors.employee_id = "Employee ID is required"
+          }
+          break
+
+        case "mobile":
+          if (!value.trim()) {
+            errors.mobile = "Mobile number is required"
+          } else if (!/^\d{10,11}$/.test(value.replace(/[-\s]/g, ""))) {
+            errors.mobile = "Please enter a valid mobile number"
+          }
+          break
+
+        case "dob":
+          if (!value) {
+            errors.dob = "Date of birth is required"
+          }
+          break
+
+        case "city":
+        case "state":
+          if (!value.trim()) {
+            errors[name] = `${name === "city" ? "City" : "State"} is required`
+          }
+          break
+
+        case "zipcode":
+          if (!value.trim()) {
+            errors.zipcode = "Zipcode is required"
+          }
+          break
+      }
+
+      return errors
+    },
+    [formData.password, courseType],
+  )
+
+  const handleChange = useCallback(
+    (e) => {
+      const { name, value } = e.target
+      let newValue = value
+      const nameFields = ["firstName", "middleName", "lastName"]
+      const numberOnlyFields = ["student_number", "employee_id", "mobile", "telephone", "zipcode"]
+      const capitalizeFields = ["firstName", "middleName", "lastName", "street", "city", "state"]
+
+      // Disallow numbers in name fields
+      if (nameFields.includes(name)) {
+        newValue = newValue.replace(/[0-9]/g, "")
+      }
+
+      // Only allow digits and hyphens for number fields
+      if (numberOnlyFields.includes(name)) {
+        newValue = newValue.replace(/[^0-9-]/g, "").slice(0, 11)
+      }
+
+      // Capitalize first letter of each word
+      if (capitalizeFields.includes(name)) {
+        newValue = newValue.replace(/\b\w/g, (char) => char.toUpperCase())
+      }
+
+      // Update form data
+      setFormData((prevData) => ({
+        ...prevData,
+        [name]: newValue,
+      }))
+
+      // Mark field as touched
+      setTouchedFields((prev) => ({ ...prev, [name]: true }))
+
+      // Validate field
+      const fieldErrors = validateField(name, newValue)
+      setValidationErrors((prev) => ({
+        ...prev,
+        [name]: fieldErrors[name] || undefined,
+      }))
+    },
+    [validateField],
+  )
+
+  const handleCourseTypeChange = useCallback((e) => {
+    const selected = e.target.value
+    setCourseType(selected)
     let accountType = ""
-
-    if (selectedRole === "Employee") {
-      newCourseType = "Employee"
-      accountType = "Employee"
-    } else if (selectedRole === "Student") {
-      newCourseType = "SHS"
-      accountType = "SHS"
-    } else {
-      newCourseType = "College"
-      accountType = "College"
-    }
-
-    setCourseType(newCourseType)
+    if (selected === "SHS") accountType = "SHS"
+    else if (selected === "College") accountType = "College"
+    else if (selected === "Employee") accountType = "Employee"
 
     setFormData((prev) => ({
       ...prev,
-      account_type: accountType,
-      student_number: "",
-      employee_id: "",
       course: "",
+      account_type: accountType,
+      student_number: selected !== "Employee" ? "" : prev.student_number,
+      employee_id: selected === "Employee" ? prev.employee_id : "",
     }))
-  }
 
-  const handleCheckboxChange = () => {
+    // Clear validation errors for fields that are no longer relevant
+    setValidationErrors((prev) => ({
+      ...prev,
+      student_number: undefined,
+      employee_id: undefined,
+      course: undefined,
+    }))
+  }, [])
+
+  const handleCheckboxChange = useCallback(() => {
     setAgreeToTerms((prev) => !prev)
-  }
+  }, [])
 
-  const validateForm = () => {
-    if (formData.password !== formData.password_confirmation) {
-      return "Passwords do not match"
+  const validateCurrentStep = useCallback(() => {
+    const errors = {}
+
+    if (currentStep === 1) {
+      const requiredFields = ["email", "password", "password_confirmation"]
+      if (courseType !== "Employee") requiredFields.push("student_number")
+      if (courseType === "Employee") requiredFields.push("employee_id")
+      if (courseType && courseType !== "Employee") requiredFields.push("course")
+
+      requiredFields.forEach((field) => {
+        const fieldErrors = validateField(field, formData[field])
+        Object.assign(errors, fieldErrors)
+      })
+    } else if (currentStep === 2) {
+      const requiredFields = ["salutation", "firstName", "lastName", "gender", "dob"]
+      requiredFields.forEach((field) => {
+        const fieldErrors = validateField(field, formData[field])
+        Object.assign(errors, fieldErrors)
+      })
+    } else if (currentStep === 3) {
+      const requiredFields = ["street", "city", "state", "zipcode", "mobile"]
+      requiredFields.forEach((field) => {
+        const fieldErrors = validateField(field, formData[field])
+        Object.assign(errors, fieldErrors)
+      })
     }
-    if (!agreeToTerms) {
-      return "You must agree to the terms and conditions."
+
+    return errors
+  }, [currentStep, courseType, formData, validateField])
+
+  const canProceedToNextStep = useCallback(() => {
+    const errors = validateCurrentStep()
+    return Object.keys(errors).length === 0
+  }, [validateCurrentStep])
+
+  const handleNext = useCallback(() => {
+    const errors = validateCurrentStep()
+    if (Object.keys(errors).length === 0) {
+      setCurrentStep((prev) => Math.min(prev + 1, 3))
+    } else {
+      setValidationErrors(errors)
+      // Mark all fields in current step as touched
+      Object.keys(errors).forEach((field) => {
+        setTouchedFields((prev) => ({ ...prev, [field]: true }))
+      })
     }
-    if (role === "Student" && !formData.student_number.trim()) {
-      return "Student Number is required for Students."
-    }
-    if (role === "Employee" && !formData.employee_id.trim()) {
-      return "Employee ID is required for Employees."
-    }
-    return ""
-  }
+  }, [validateCurrentStep])
+
+  const handlePrevious = useCallback(() => {
+    setCurrentStep((prev) => Math.max(prev - 1, 1))
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!agreeToTerms) {
+      Swal.fire("Error", "You must agree to the terms and conditions.", "error")
+      return
+    }
 
-    const validationError = validateForm()
-    if (validationError) {
-      Swal.fire("Error", validationError, "error")
+    const allErrors = validateCurrentStep()
+    if (Object.keys(allErrors).length > 0) {
+      setValidationErrors(allErrors)
       return
     }
 
@@ -151,7 +401,6 @@ export default function Signup() {
 
     try {
       const response = await axios.post("http://localhost:8000/api/signup", payload)
-
       if (response.data?.success === true) {
         setLoading(false)
         Swal.fire("Success", "Registration successful! You can now log in.", "success").then(() => {
@@ -169,9 +418,9 @@ export default function Signup() {
   }
 
   const shsCourses = [
-    { value: "ABM", text: "ABM" },
-    { value: "STEM", text: "STEM" },
-    { value: "HUMSS", text: "HUMSS" },
+    { value: "ABM", text: "ABM - Accountancy, Business and Management" },
+    { value: "STEM", text: "STEM - Science, Technology, Engineering and Mathematics" },
+    { value: "HUMSS", text: "HUMSS - Humanities and Social Sciences" },
   ]
 
   const collegeDepartments = {
@@ -179,13 +428,13 @@ export default function Signup() {
       { value: "BSA", text: "(BSA) Bachelor of Science in Accountancy" },
       { value: "BSBA-FINMGT", text: "(BSBA-FINMGT) BSBA Major in Financial Management" },
       { value: "BSBA-MKTGMGT", text: "(BSBA-MKTGMGT) BSBA Major in Marketing Management" },
-      { value: "BSTM", text: "(BSTM) BS in Tourism" },
+      { value: "BSTM", text: "(BSTM) BS in Tourism Management" },
     ],
     "SACE (School of Architecture, Computing, and Engineering)": [
       { value: "BSARCH", text: "(BSARCH) BS in Architecture" },
       { value: "BSCE", text: "(BSCE) BS in Civil Engineering" },
       { value: "BSCS", text: "(BSCS) BS in Computer Science" },
-      { value: "BSIT-MWA", text: "(BSIT-MWA) BSIT with Mobile/Web App" },
+      { value: "BSIT-MWA", text: "(BSIT-MWA) BSIT with Mobile/Web App Development" },
     ],
     "SAHS (School of Allied Health and Science)": [
       { value: "BSMT", text: "(BSMT) BS in Medical Technology" },
@@ -216,305 +465,507 @@ export default function Signup() {
     }
   }
 
+  const ProgressBar = () => {
+    const progress = (currentStep / 3) * 100
+
+    return (
+      <div className="mb-10">
+        <div className="flex justify-between items-center mb-3">
+          <span className="text-sm font-bold text-blue-900">Step {currentStep} of 3</span>
+          <span className="text-sm text-blue-700 font-medium">{Math.round(progress)}% Complete</span>
+        </div>
+        <div className="w-full bg-blue-100 rounded-full h-3 shadow-inner">
+          <div
+            className="bg-gradient-to-r from-yellow-400 to-yellow-500 h-3 rounded-full transition-all duration-500 ease-out shadow-sm"
+            style={{ width: `${progress}%` }}
+          ></div>
+        </div>
+        <div className="flex justify-between mt-3 text-xs font-medium">
+          <span className={`${currentStep >= 1 ? "text-blue-800 font-bold" : "text-blue-400"} transition-colors`}>
+            Account Information
+          </span>
+          <span className={`${currentStep >= 2 ? "text-blue-800 font-bold" : "text-blue-400"} transition-colors`}>
+            Personal Details
+          </span>
+          <span className={`${currentStep >= 3 ? "text-blue-800 font-bold" : "text-blue-400"} transition-colors`}>
+            Contact Information
+          </span>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
       {loading && <LoadingScreen />}
-      <nav className="bg-[#35408E] p-4 flex justify-between items-center px-8">
-        <div className="flex items-center space-x-3">
-          <img
-            src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/NU_shield.svg/800px-NU_shield.svg.png"
-            alt="NU Logo"
-            className="w-12"
-          />
-          <span className="text-xl font-bold text-[#FFFFFF]">NU-LIPA</span>
-        </div>
-      </nav>
 
-      <h2 className="text-xl font-bold text-[#31708F] flex justify-center items-center gap-2 mt-8 mb-10 pb-2">
-        <FaUserPlus className="text-2xl" />
-        Account Registration
-      </h2>
-
-      <form
-        className="max-w-7xl mx-auto bg-white shadow-md p-8 grid grid-cols-1 md:grid-cols-2 gap-8"
-        autoComplete="off"
-        onSubmit={handleSubmit}
-      >
-        {/* User Credentials */}
-        <div>
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <i className="fas fa-user text-blue-700"></i> User Credentials
-          </h3>
-          <label className="block text-sm font-medium">Email Address*</label>
-          <input
-            required
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            className="w-full border p-2 rounded mb-3"
-          />
-
-          <label className="block text-sm font-medium">Password*</label>
-          <input
-            required
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            className="w-full border p-2 rounded mb-3"
-          />
-
-          <label className="block text-sm font-medium">Confirm Password*</label>
-          <input
-            required
-            type="password"
-            name="password_confirmation"
-            value={formData.password_confirmation}
-            onChange={handleChange}
-            className="w-full border p-2 rounded mb-3"
-          />
-
-          <label className="block text-sm font-medium">Account Type*</label>
-          <select
-            required
-            value={courseType}
-            onChange={(e) => {
-              const selected = e.target.value
-              setCourseType(selected)
-
-              let accountType = ""
-              if (selected === "SHS") accountType = "SHS"
-              else if (selected === "College") accountType = "College"
-              else if (selected === "Employee") accountType = "Employee"
-
-              setFormData((prev) => ({
-                ...prev,
-                course: "",
-                account_type: accountType,
-                student_number: selected !== "Employee" ? "" : prev.student_number,
-                employee_id: selected === "Employee" ? prev.employee_id : "",
-              }))
-            }}
-            className="w-full border p-2 rounded mb-3"
-          >
-            <option value="">Select Course Type</option>
-            <option value="SHS">SHS</option>
-            <option value="College">College</option>
-            <option value="Employee">Employee</option>
-          </select>
-
-          <label className="block text-sm font-medium">
-            {courseType === "Employee" ? "Employee ID*" : "Student Number*"}
-          </label>
-          <input
-            required
-            type="text"
-            name={courseType === "Employee" ? "employee_id" : "student_number"}
-            value={courseType === "Employee" ? formData.employee_id : formData.student_number}
-            onChange={handleChange}
-            className="w-full border p-2 rounded mb-3"
-          />
-
-          {courseType !== "Employee" && (
-            <>
-              <label className="block text-sm font-medium">Course*</label>
-              <select
-                required
-                name="course"
-                value={formData.course}
-                onChange={handleChange}
-                className="w-full border p-2 rounded mb-3"
-              >
-                <option value="">Select Course</option>
-                {renderCourses()}
-              </select>
-            </>
-          )}
-        </div>
-
-        {/* Basic Information */}
-        <div>
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <i className="fas fa-info-circle text-blue-700"></i> Basic Information
-          </h3>
-          <label className="block text-sm font-medium">Salutation*</label>
-          <select
-            name="salutation"
-            value={formData.salutation}
-            onChange={handleChange}
-            className="w-full border p-2 rounded mb-3"
-          >
-            <option value="">Select Salutation</option>
-            <option>Mr.</option>
-            <option>Ms.</option>
-            <option>Mrs.</option>
-          </select>
-
-          <label className="block text-sm font-medium">Last Name*</label>
-          <input
-            required
-            type="text"
-            name="lastName"
-            value={formData.lastName}
-            onChange={handleChange}
-            className="w-full border p-2 rounded mb-3"
-          />
-
-          <label className="block text-sm font-medium">First Name*</label>
-          <input
-            required
-            type="text"
-            name="firstName"
-            value={formData.firstName}
-            onChange={handleChange}
-            className="w-full border p-2 rounded mb-3"
-          />
-
-          <label className="block text-sm font-medium">Middle Name</label>
-          <input
-            type="text"
-            name="middleName"
-            autoComplete="off"
-            value={formData.middleName}
-            onChange={handleChange}
-            className="w-full border p-2 rounded mb-3"
-          />
-
-          <label className="block text-sm font-medium">Gender*</label>
-          <select
-            name="gender"
-            value={formData.gender}
-            onChange={handleChange}
-            className="w-full border p-2 rounded mb-3"
-          >
-            <option value="">Select Gender</option>
-            <option>Male</option>
-            <option>Female</option>
-            <option>Other</option>
-          </select>
-
-          <label className="block text-sm font-medium">Date of Birth*</label>
-          <input
-            required
-            type="date"
-            name="dob"
-            value={formData.dob}
-            onChange={handleChange}
-            className="w-full border p-2 rounded mb-3"
-          />
-        </div>
-
-        {/* Address and Contacts */}
-        <div className="md:col-span-2">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <i className="fas fa-map-marker-alt text-blue-700"></i> Address and Contacts
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium">Street/Barangay</label>
-              <textarea
-                name="street"
-                value={formData.street}
-                onChange={handleChange}
-                className="w-full border p-2 rounded mb-3"
-                rows="2"
-              />
+      {/* Header with NU Golden Blue Branding */}
+      <div className="bg-gradient-to-r from-blue-800 to-blue-900 shadow-lg border-b-4 border-yellow-400">
+        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg border-3 border-yellow-400">
+                <img
+                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/NU_shield.svg/800px-NU_shield.svg.png"
+                  alt="NU Logo"
+                  className="w-10 h-10"
+                />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-white">National University</h1>
+                <p className="text-yellow-300 text-sm font-medium">Lipa Campus - Philippines</p>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium">City/Municipality*</label>
-              <input
-                required
-                type="text"
-                name="city"
-                value={formData.city}
-                onChange={handleChange}
-                className="w-full border p-2 rounded mb-3"
-              />
+            <div className="hidden sm:flex items-center space-x-3">
+              <div className="bg-yellow-400 p-3 rounded-full shadow-lg">
+                <FaStethoscope className="text-blue-800 text-2xl" />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium">State/Province*</label>
-              <input
-                required
-                type="text"
-                name="state"
-                value={formData.state}
-                onChange={handleChange}
-                className="w-full border p-2 rounded mb-3"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Country*</label>
-              <input
-                required
-                type="text"
-                value="Philippines"
-                disabled
-                className="w-full border p-2 rounded mb-3 bg-gray-100"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Zipcode</label>
-              <input
-                type="text"
-                name="zipcode"
-                value={formData.zipcode}
-                onChange={handleChange}
-                className="w-full border p-2 rounded mb-3"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Telephone No.</label>
-              <input
-                required
-                type="text"
-                name="telephone"
-                value={formData.telephone}
-                onChange={handleChange}
-                className="w-full border p-2 rounded mb-3"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Mobile No.*</label>
-              <input
-                required
-                type="text"
-                name="mobile"
-                value={formData.mobile}
-                onChange={handleChange}
-                className="w-full border p-2 rounded mb-3"
-              />
+          </div>
+        </nav>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-blue-900 flex justify-center items-center gap-3 mb-3">
+            <FaUserPlus className="text-yellow-600" />
+            Student Registration Portal
+          </h2>
+          <p className="text-blue-700 font-medium text-lg">Join the NU Lipa Community</p>
+          <div className="mt-3 flex justify-center">
+            <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-blue-900 px-6 py-2 rounded-full text-sm font-bold shadow-md">
+              Excellence • Innovation • Service
             </div>
           </div>
         </div>
 
-        {/* Terms and Buttons */}
-        <div className="md:col-span-2">
-          <div className="flex items-center gap-2 mb-4">
-            <input type="checkbox" checked={agreeToTerms} onChange={handleCheckboxChange} />
-            <label className="text-sm">
-              I agree to the{" "}
-              <span className="text-blue-500 underline cursor-pointer">NU CARES: Service Terms & Conditions</span>
-            </label>
-          </div>
+        <div className="bg-white shadow-2xl rounded-2xl overflow-hidden border-2 border-yellow-200">
+          {/* NU Golden accent bar */}
+          <div className="h-4 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-400"></div>
 
-          {errorMessage && <p className="text-red-500 text-sm">{errorMessage}</p>}
+          <div className="p-6 sm:p-10">
+            <ProgressBar />
 
-          <div className="flex gap-4">
-            <div className="flex flex-col justify-center items-center">
-              <button type="submit" className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
-                Register
-              </button>
-            </div>
+            <form onSubmit={handleSubmit}>
+              {/* Step 1: User Credentials */}
+              {currentStep === 1 && (
+                <div className="space-y-6" key="step-1">
+                  <div className="text-center mb-8 p-6 bg-gradient-to-r from-blue-50 to-yellow-50 rounded-xl border-2 border-yellow-200">
+                    <div className="bg-yellow-400 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                      <FaUserPlus className="text-3xl text-blue-800" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-blue-900 mb-2">Account Setup</h3>
+                    <p className="text-blue-600">Create your NU Lipa account credentials</p>
+                  </div>
 
-            <NavLink to="/login">
-              <button type="button" className="bg-yellow-400 text-white px-6 py-2 rounded hover:bg-yellow-500">
-                Cancel
-              </button>
-            </NavLink>
+                  <InputField
+                    key="email"
+                    label="Email Address"
+                    name="email"
+                    type="email"
+                    required
+                    autoComplete="new-email"
+                    placeholder="Enter your email address"
+                    value={formData.email}
+                    onChange={handleChange}
+                    hasError={touchedFields.email && validationErrors.email}
+                    isValid={touchedFields.email && !validationErrors.email && formData.email}
+                    errorMessage={validationErrors.email}
+                  />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <InputField
+                      key="password"
+                      label="Password"
+                      name="password"
+                      type="password"
+                      required
+                      autoComplete="new-password"
+                      placeholder="Create a strong password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      hasError={touchedFields.password && validationErrors.password}
+                      isValid={touchedFields.password && !validationErrors.password && formData.password}
+                      errorMessage={validationErrors.password}
+                    />
+                    <InputField
+                      key="password_confirmation"
+                      label="Confirm Password"
+                      name="password_confirmation"
+                      type="password"
+                      required
+                      autoComplete="new-password"
+                      placeholder="Confirm your password"
+                      value={formData.password_confirmation}
+                      onChange={handleChange}
+                      hasError={touchedFields.password_confirmation && validationErrors.password_confirmation}
+                      isValid={
+                        touchedFields.password_confirmation &&
+                        !validationErrors.password_confirmation &&
+                        formData.password_confirmation
+                      }
+                      errorMessage={validationErrors.password_confirmation}
+                    />
+                  </div>
+
+                  <InputField
+                    key="account_type"
+                    label="Account Type"
+                    name="account_type"
+                    type="select"
+                    required
+                    value={courseType}
+                    onChange={handleCourseTypeChange}
+                    hasError={touchedFields.account_type && validationErrors.account_type}
+                    isValid={touchedFields.account_type && !validationErrors.account_type && courseType}
+                    errorMessage={validationErrors.account_type}
+                    options={[
+                      { value: "", text: "Select Your Account Type" },
+                      { value: "SHS", text: "Senior High School Student" },
+                      { value: "College", text: "College Student" },
+                      { value: "Employee", text: "Faculty/Staff Member" },
+                    ]}
+                  />
+
+                  <InputField
+                    key={courseType === "Employee" ? "employee_id" : "student_number"}
+                    label={courseType === "Employee" ? "Employee ID Number" : "Student ID Number"}
+                    name={courseType === "Employee" ? "employee_id" : "student_number"}
+                    required
+                    autoComplete="new-student"
+                    placeholder={courseType === "Employee" ? "Enter your employee ID" : "Enter your student number"}
+                    value={courseType === "Employee" ? formData.employee_id : formData.student_number}
+                    onChange={handleChange}
+                    hasError={
+                      courseType === "Employee"
+                        ? touchedFields.employee_id && validationErrors.employee_id
+                        : touchedFields.student_number && validationErrors.student_number
+                    }
+                    isValid={
+                      courseType === "Employee"
+                        ? touchedFields.employee_id && !validationErrors.employee_id && formData.employee_id
+                        : touchedFields.student_number && !validationErrors.student_number && formData.student_number
+                    }
+                    errorMessage={
+                      courseType === "Employee" ? validationErrors.employee_id : validationErrors.student_number
+                    }
+                  />
+
+                  {courseType && courseType !== "Employee" && (
+                    <InputField
+                      key="course"
+                      label="Academic Program"
+                      name="course"
+                      type="select"
+                      required
+                      value={formData.course}
+                      onChange={handleChange}
+                      hasError={touchedFields.course && validationErrors.course}
+                      isValid={touchedFields.course && !validationErrors.course && formData.course}
+                      errorMessage={validationErrors.course}
+                    >
+                      <option value="">Select Your Program</option>
+                      {renderCourses()}
+                    </InputField>
+                  )}
+                </div>
+              )}
+
+              {/* Step 2: Basic Information */}
+              {currentStep === 2 && (
+                <div className="space-y-6" key="step-2">
+                  <div className="text-center mb-8 p-6 bg-gradient-to-r from-yellow-50 to-blue-50 rounded-xl border-2 border-blue-200">
+                    <div className="bg-blue-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                      <FaGraduationCap className="text-3xl text-yellow-400" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-blue-900 mb-2">Personal Information</h3>
+                    <p className="text-blue-600">Tell us about yourself</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <InputField
+                      key="salutation"
+                      label="Salutation"
+                      name="salutation"
+                      type="select"
+                      required
+                      value={formData.salutation}
+                      onChange={handleChange}
+                      hasError={touchedFields.salutation && validationErrors.salutation}
+                      isValid={touchedFields.salutation && !validationErrors.salutation && formData.salutation}
+                      errorMessage={validationErrors.salutation}
+                      options={[{ value: "", text: "Title" }, "Mr.", "Ms.", "Mrs."]}
+                    />
+                    <InputField
+                      key="firstName"
+                      label="First Name"
+                      name="firstName"
+                      required
+                      autoComplete="new-firstname"
+                      placeholder="First name"
+                      value={formData.firstName}
+                      onChange={handleChange}
+                      hasError={touchedFields.firstName && validationErrors.firstName}
+                      isValid={touchedFields.firstName && !validationErrors.firstName && formData.firstName}
+                      errorMessage={validationErrors.firstName}
+                    />
+                    <InputField
+                      key="lastName"
+                      label="Last Name"
+                      name="lastName"
+                      required
+                      autoComplete="new-lastname"
+                      placeholder="Last name"
+                      value={formData.lastName}
+                      onChange={handleChange}
+                      hasError={touchedFields.lastName && validationErrors.lastName}
+                      isValid={touchedFields.lastName && !validationErrors.lastName && formData.lastName}
+                      errorMessage={validationErrors.lastName}
+                    />
+                  </div>
+
+                  <InputField
+                    key="middleName"
+                    label="Middle Name (Optional)"
+                    name="middleName"
+                    autoComplete="new-middlename"
+                    placeholder="Middle name or initial"
+                    value={formData.middleName}
+                    onChange={handleChange}
+                    hasError={touchedFields.middleName && validationErrors.middleName}
+                    isValid={touchedFields.middleName && !validationErrors.middleName && formData.middleName}
+                    errorMessage={validationErrors.middleName}
+                  />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <InputField
+                      key="gender"
+                      label="Gender"
+                      name="gender"
+                      type="select"
+                      required
+                      value={formData.gender}
+                      onChange={handleChange}
+                      hasError={touchedFields.gender && validationErrors.gender}
+                      isValid={touchedFields.gender && !validationErrors.gender && formData.gender}
+                      errorMessage={validationErrors.gender}
+                      options={[{ value: "", text: "Select Gender" }, "Male", "Female", "Other"]}
+                    />
+                    <InputField
+                      key="dob"
+                      label="Date of Birth"
+                      name="dob"
+                      type="date"
+                      required
+                      value={formData.dob}
+                      onChange={handleChange}
+                      hasError={touchedFields.dob && validationErrors.dob}
+                      isValid={touchedFields.dob && !validationErrors.dob && formData.dob}
+                      errorMessage={validationErrors.dob}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Address and Contacts */}
+              {currentStep === 3 && (
+                <div className="space-y-6" key="step-3">
+                  <div className="text-center mb-8 p-6 bg-gradient-to-r from-blue-50 to-yellow-50 rounded-xl border-2 border-yellow-200">
+                    <div className="bg-yellow-400 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                      <FaStethoscope className="text-3xl text-blue-800" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-blue-900 mb-2">Contact Information</h3>
+                    <p className="text-blue-600">How can we reach you?</p>
+                  </div>
+
+                  <InputField
+                    key="street"
+                    label="Street/Barangay"
+                    name="street"
+                    type="textarea"
+                    required
+                    rows={3}
+                    autoComplete="new-street"
+                    placeholder="Street, Barangay"
+                    value={formData.street}
+                    onChange={handleChange}
+                    hasError={touchedFields.street && validationErrors.street}
+                    isValid={touchedFields.street && !validationErrors.street && formData.street}
+                    errorMessage={validationErrors.street}
+                  />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <InputField
+                      key="city"
+                      label="City/Municipality"
+                      name="city"
+                      required
+                      autoComplete="new-city"
+                      placeholder="City or Municipality"
+                      value={formData.city}
+                      onChange={handleChange}
+                      hasError={touchedFields.city && validationErrors.city}
+                      isValid={touchedFields.city && !validationErrors.city && formData.city}
+                      errorMessage={validationErrors.city}
+                    />
+                    <InputField
+                      key="state"
+                      label="Province/State"
+                      name="state"
+                      required
+                      autoComplete="new-state"
+                      placeholder="Province or State"
+                      value={formData.state}
+                      onChange={handleChange}
+                      hasError={touchedFields.state && validationErrors.state}
+                      isValid={touchedFields.state && !validationErrors.state && formData.state}
+                      errorMessage={validationErrors.state}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <InputField
+                      key="zipcode"
+                      label="Postal Code"
+                      name="zipcode"
+                      required
+                      autoComplete="new-zipcode"
+                      placeholder="ZIP/Postal Code"
+                      value={formData.zipcode}
+                      onChange={handleChange}
+                      hasError={touchedFields.zipcode && validationErrors.zipcode}
+                      isValid={touchedFields.zipcode && !validationErrors.zipcode && formData.zipcode}
+                      errorMessage={validationErrors.zipcode}
+                    />
+                    <div className="mb-6">
+                      <label className="block text-sm font-semibold text-blue-900 mb-2">
+                        Country <span className="text-yellow-600 ml-1 text-lg font-bold">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value="Philippines"
+                        disabled
+                        className="w-full px-4 py-3 border-2 border-blue-200 rounded-lg bg-blue-50 text-blue-800 font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <InputField
+                      key="mobile"
+                      label="Mobile Number"
+                      name="mobile"
+                      required
+                      autoComplete="new-mobile"
+                      placeholder="09XX-XXX-XXXX"
+                      value={formData.mobile}
+                      onChange={handleChange}
+                      hasError={touchedFields.mobile && validationErrors.mobile}
+                      isValid={touchedFields.mobile && !validationErrors.mobile && formData.mobile}
+                      errorMessage={validationErrors.mobile}
+                    />
+                    <InputField
+                      key="telephone"
+                      label="Emergency Contact (Optional)"
+                      name="telephone"
+                      autoComplete="new-telephone"
+                      placeholder="Landline or alternate number"
+                      value={formData.telephone}
+                      onChange={handleChange}
+                      hasError={touchedFields.telephone && validationErrors.telephone}
+                      isValid={touchedFields.telephone && !validationErrors.telephone && formData.telephone}
+                      errorMessage={validationErrors.telephone}
+                    />
+                  </div>
+
+                  <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-yellow-50 rounded-xl border-2 border-yellow-300">
+                    <div className="flex items-start gap-4">
+                      <input
+                        type="checkbox"
+                        checked={agreeToTerms}
+                        onChange={handleCheckboxChange}
+                        className="mt-1 h-5 w-5 text-blue-800 focus:ring-yellow-400 border-blue-300 rounded"
+                      />
+                      <label className="text-sm text-blue-900 leading-relaxed font-medium">
+                        I acknowledge that I have read, understood, and agree to the{" "}
+                        <span className="text-blue-700 underline cursor-pointer hover:text-blue-900 font-semibold">
+                          NU CARES: Service Terms & Conditions
+                        </span>{" "}
+                        and{" "}
+                        <span className="text-blue-700 underline cursor-pointer hover:text-blue-900 font-semibold">
+                          Privacy Policy
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Navigation Buttons */}
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-6 mt-10 pt-8 border-t-2 border-yellow-200">
+                <div className="flex gap-4 order-2 sm:order-1">
+                  {currentStep > 1 && (
+                    <button
+                      type="button"
+                      onClick={handlePrevious}
+                      className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 font-semibold shadow-md hover:shadow-lg border-2 border-blue-700"
+                    >
+                      ← Previous
+                    </button>
+                  )}
+
+                  <NavLink to="/login">
+                    <button
+                      type="button"
+                      className="px-8 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all duration-200 font-semibold shadow-md hover:shadow-lg"
+                    >
+                      Cancel
+                    </button>
+                  </NavLink>
+                </div>
+
+                <div className="order-1 sm:order-2">
+                  {currentStep < 3 ? (
+                    <button
+                      type="button"
+                      onClick={handleNext}
+                      disabled={!canProceedToNextStep()}
+                      className={`px-8 py-3 rounded-lg transition-all duration-200 font-bold text-lg shadow-lg hover:shadow-xl border-2 ${
+                        canProceedToNextStep()
+                          ? "bg-gradient-to-r from-yellow-400 to-yellow-500 text-blue-900 hover:from-yellow-500 hover:to-yellow-600 transform hover:scale-105 border-yellow-600"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed border-gray-400"
+                      }`}
+                    >
+                      Continue →
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={!canProceedToNextStep() || !agreeToTerms}
+                      className={`px-10 py-4 rounded-lg transition-all duration-200 font-bold text-lg shadow-lg hover:shadow-xl border-2 ${
+                        canProceedToNextStep() && agreeToTerms
+                          ? "bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transform hover:scale-105 border-green-700"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed border-gray-400"
+                      }`}
+                    >
+                      Complete Registration
+                    </button>
+                  )}
+                </div>
+              </div>
+            </form>
           </div>
         </div>
-      </form>
+
+        {/* Footer */}
+        <div className="text-center mt-8 py-6">
+          <p className="text-blue-700 text-sm font-bold">
+            © 2025 National University - Lipa Campus. All rights reserved.
+          </p>
+          <p className="text-blue-600 text-xs mt-1">Building tomorrow's leaders today</p>
+        </div>
+      </div>
     </div>
   )
 }
