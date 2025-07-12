@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-
+/* Existing animations */
 @keyframes spin-center {
   0% {
     transform: rotate(0deg);
@@ -14,6 +14,166 @@
 
 .animate-spin-center {
   animation: spin-center 2s linear infinite;
+}
+
+/* Enhanced Loading Animations */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes loading-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+/* Loading Animation Classes */
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+.animate-loading-bar {
+  animation: loading-bar 2s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  background-size: 200px 100%;
+}
+
+/* Enhanced Animation Delays */
+.delay-75 {
+  animation-delay: 0.075s;
+}
+
+.delay-100 {
+  animation-delay: 0.1s;
+}
+
+.delay-150 {
+  animation-delay: 0.15s;
+}
+
+.delay-200 {
+  animation-delay: 0.2s;
+}
+
+.delay-300 {
+  animation-delay: 0.3s;
+}
+
+.delay-500 {
+  animation-delay: 0.5s;
+}
+
+.delay-700 {
+  animation-delay: 0.7s;
+}
+
+.delay-1000 {
+  animation-delay: 1s;
+}
+
+/* NU-CARES Specific Animations */
+@keyframes nu-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgba(255, 193, 7, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 193, 7, 0.6), 0 0 30px rgba(255, 193, 7, 0.4);
+  }
+}
+
+@keyframes nu-pulse {
+  0%,
+  100% {
+    background-color: rgba(46, 49, 146, 0.1);
+  }
+  50% {
+    background-color: rgba(255, 193, 7, 0.2);
+  }
+}
+
+.animate-nu-glow {
+  animation: nu-glow 2s ease-in-out infinite;
+}
+
+.animate-nu-pulse {
+  animation: nu-pulse 2s ease-in-out infinite;
+}
+
+/* Loading Skeleton Animations */
+@keyframes skeleton-loading {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200px 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+.skeleton-dark {
+  background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+  background-size: 200px 100%;
+  animation: skeleton-loading 1.5s infinite;
 }
 
 @layer components {
@@ -55,5 +215,115 @@
 
   .chart {
     @apply relative h-64 w-full;
+  }
+
+  /* Enhanced Loading Components */
+  .loading-overlay {
+    @apply fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center;
+  }
+
+  .loading-container {
+    @apply relative flex flex-col justify-center items-center bg-white/10 backdrop-blur-md rounded-3xl p-12 border border-white/20 shadow-2xl max-w-md mx-4;
+  }
+
+  .loading-logo {
+    @apply w-24 h-24 animate-spin-slow;
+  }
+
+  .loading-ring {
+    @apply absolute inset-0 border-4 border-transparent border-t-yellow-400 border-r-yellow-400 rounded-full animate-spin;
+  }
+
+  .loading-dots {
+    @apply flex justify-center space-x-1;
+  }
+
+  .loading-dot {
+    @apply w-2 h-2 bg-yellow-400 rounded-full animate-bounce;
+  }
+
+  .loading-progress {
+    @apply w-64 h-2 bg-white/20 rounded-full overflow-hidden;
+  }
+
+  .loading-progress-bar {
+    @apply h-full bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full animate-loading-bar;
+  }
+
+  /* NU-CARES Theme Components */
+  .nu-gradient-bg {
+    @apply bg-gradient-to-r from-blue-800 via-blue-900 to-blue-800;
+  }
+
+  .nu-gradient-text {
+    @apply bg-gradient-to-r from-yellow-400 to-yellow-500 bg-clip-text text-transparent;
+  }
+
+  .nu-card {
+    @apply bg-white shadow-lg rounded-2xl border border-yellow-200 hover:shadow-2xl transition-all duration-300;
+  }
+
+  .nu-button-primary {
+    @apply bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-md hover:shadow-lg;
+  }
+
+  .nu-button-secondary {
+    @apply bg-gradient-to-r from-yellow-400 to-yellow-500 text-blue-900 px-6 py-3 rounded-lg font-semibold hover:from-yellow-500 hover:to-yellow-600 transition-all duration-300 shadow-md hover:shadow-lg;
+  }
+}
+
+/* Utility Classes for Better Performance */
+@layer utilities {
+  .animate-delay-75 {
+    animation-delay: 75ms;
+  }
+
+  .animate-delay-100 {
+    animation-delay: 100ms;
+  }
+
+  .animate-delay-150 {
+    animation-delay: 150ms;
+  }
+
+  .animate-delay-200 {
+    animation-delay: 200ms;
+  }
+
+  .animate-delay-300 {
+    animation-delay: 300ms;
+  }
+
+  .animate-delay-500 {
+    animation-delay: 500ms;
+  }
+
+  .animate-delay-700 {
+    animation-delay: 700ms;
+  }
+
+  .animate-delay-1000 {
+    animation-delay: 1000ms;
+  }
+
+  /* Backdrop blur utilities */
+  .backdrop-blur-xs {
+    backdrop-filter: blur(2px);
+  }
+
+  .backdrop-blur-sm {
+    backdrop-filter: blur(4px);
+  }
+
+  .backdrop-blur-md {
+    backdrop-filter: blur(8px);
+  }
+
+  .backdrop-blur-lg {
+    backdrop-filter: blur(12px);
+  }
+
+  .backdrop-blur-xl {
+    backdrop-filter: blur(16px);
   }
 }
