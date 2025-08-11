@@ -1,6 +1,7 @@
 "use client"
+
 import { useNavigate } from "react-router-dom"
-import { UserIcon, FileText, Calendar, Bell, Settings, LogOut } from "lucide-react"
+import { UserIcon, FileText, Calendar } from "lucide-react"
 import { motion } from "framer-motion"
 import { useState, useEffect } from "react"
 
@@ -65,21 +66,8 @@ export default function UserDashboard() {
     </motion.div>
   )
 
-  // Quick Action Button component
-  const QuickActionButton = ({ icon, label, onClick }) => (
-    <motion.button
-      whileHover={{ scale: 1.05, y: -2 }}
-      whileTap={{ scale: 0.95 }}
-      onClick={onClick}
-      className="flex items-center space-x-3 px-5 py-3.5 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md font-medium bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 text-blue-700 border border-blue-200"
-    >
-      {icon}
-      <span>{label}</span>
-    </motion.button>
-  )
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-yellow-50">
+    <div className="bg-gradient-to-br from-blue-50 via-white to-yellow-50">
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Header Section (now just a title, assuming global navbar is present) */}
@@ -89,34 +77,6 @@ export default function UserDashboard() {
             Dashboard &gt; <span className="text-blue-800 font-medium">Home</span>
           </p>
         </div>
-
-        {/* Quick Actions Bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-10 p-8 bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-yellow-200"
-        >
-          <h2 className="text-xl font-bold text-blue-900 mb-6 flex items-center gap-3">
-            <div className="p-2 bg-yellow-400 rounded-xl">
-              <Settings className="text-blue-800 text-lg" />
-            </div>
-            Quick Actions
-          </h2>
-          <div className="flex flex-wrap gap-4">
-            <QuickActionButton
-              icon={<Settings className="text-lg" />}
-              label="Settings"
-              onClick={() => navigate("/user/settings")}
-            />
-            <QuickActionButton
-              icon={<Bell className="text-lg" />}
-              label="Notifications"
-              onClick={() => navigate("/user/notifications")}
-            />
-            <QuickActionButton icon={<LogOut className="text-lg" />} label="Logout" onClick={handleLogout} />
-          </div>
-        </motion.div>
 
         {/* Main Dashboard Cards */}
         <motion.div
@@ -143,7 +103,7 @@ export default function UserDashboard() {
               icon={<Calendar className="h-9 w-9" />}
               title="Book Appointment"
               subtitle="Schedule new appointments and manage your visits."
-              onClick={() => navigate("/user/appointments")}
+              onClick={() => navigate("/user/appointmentBooking")}
             />
             <CustomCard
               icon={<FileText className="h-9 w-9" />}
@@ -169,4 +129,3 @@ export default function UserDashboard() {
     </div>
   )
 }
-// Note: This code assumes you have the necessary routes set up in your React Router configuration.

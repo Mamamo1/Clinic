@@ -1,32 +1,67 @@
 <?php
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\InventoryController;
-use App\Http\Controllers\MedicalRecordController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\MedicalHistoryController;
+use App\Http\Controllers\AppointmentController;
 
-Route::post('/signup', [AuthController::class, 'signup']);
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register API routes for your application. These
+| routes are loaded by the RouteServiceProvider and all of them will
+| be assigned to the "api" middleware group. Make something great!
+|
+*/
+
+Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+    return $request->user();
+});
+
+// Authentication routes
+Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 
+// User management routes
 Route::middleware('auth:sanctum')->group(function () {
-    // Authenticated User Routes
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/user', [AuthController::class, 'userInfo']);
-    Route::get('/admin', [AuthController::class, 'admin']);
-    Route::get('/users', [AuthController::class, 'getAllUsers']);
-    Route::get('/users/filtered', [AuthController::class, 'filteredUsers']);
-    Route::get('/users/{id}', [AuthController::class, 'getUser']);
+    Route::get('/users', [UserController::class, 'index']);
+    Route::get('/users/{id}', [UserController::class, 'show']);
+    Route::put('/users/{id}', [UserController::class, 'update']);
+    Route::delete('/users/{id}', [UserController::class, 'destroy']);
+});
 
-    // Inventory & Deduction
-    Route::apiResource('inventory', InventoryController::class);
-    Route::post('/inventory/deduct', [InventoryController::class, 'deduct']);
+// Medical history routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/medical-history/{userId}', [MedicalHistoryController::class, 'show']);
+    Route::post('/medical-history/{userId}', [MedicalHistoryController::class, 'store']);
+    Route::put('/medical-history/{userId}', [MedicalHistoryController::class, 'update']);
+});
 
-    // Medical Records - Custom route for fetching by user ID (must come BEFORE apiResource)
-    Route::get('/medical-records/user/{user_id}', [MedicalRecordController::class, 'getByUserId']);
+// Appointment routes
+Route::middleware('auth:sanctum')->group(function () {
+    // Get all appointments (for staff)
+    Route::get('/appointments', [AppointmentController::class, 'index']);
     
-    // Medical Records - Resource routes (DELETE will work now)
-    Route::apiResource('medical-records', MedicalRecordController::class);
-
-    // Medical Staff Filter
-    Route::get('/users/medical-staff', [AuthController::class, 'getMedicalStaff']);
+    // Get user's own appointments
+    Route::get('/appointments/my', [AppointmentController::class, 'getUserAppointments']);
+    
+    // Get available time slots
+    Route::get('/appointments/time-slots', [AppointmentController::class, 'getAvailableTimeSlots']);
+    
+    // Create new appointment
+    Route::post('/appointments', [AppointmentController::class, 'store']);
+    
+    // Update appointment status (for staff)
+    Route::put('/appointments/{id}/status', [AppointmentController::class, 'updateStatus']);
+    
+    // Cancel appointment (for users)
+    Route::put('/appointments/{id}/cancel', [AppointmentController::class, 'cancel']);
+    
+    // Delete appointment (for admin only)
+    Route::delete('/appointments/{id}', [AppointmentController::class, 'destroy']);
 });

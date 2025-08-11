@@ -188,7 +188,7 @@ export default function UserProfile() {
             {renderField("Last Name", userData.last_name, <User className="w-4 h-4" />)}
             {renderField("Gender", userData.gender, <Gender className="w-4 h-4" />)}
             {renderField("Date of Birth", userData.dob, <Calendar className="w-4 h-4" />)}
-            {renderField("Nationality", userData.nationality, <Globe className="w-4 h-4" />)}
+            {renderField("Country", "Philippines", <Globe className="w-4 h-4" />)}
           </div>
 
           {/* Address And Contacts */}

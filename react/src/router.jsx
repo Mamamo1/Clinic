@@ -9,7 +9,7 @@ import Index from './views/Index';
 import UserLayout from './user/components/UserLayout';
 import User from './user/user';
 import ConsultationHistory from './user/history';
-import PendingRequirements from './user/pending';
+import AppointmentBooking from './user/appointmentBooking';
 import StudentProfile from './user/profile';
 
 // Admin Pages & Layout
@@ -20,7 +20,7 @@ import AdminLayout from './admin/components/AdminLayout';
 import InventorySystem from './admin/InventorySystem';
 import ManageMedicalRecords from './admin/MedicalRecords/ManageMedicalRecords';
 import UserDetail from './admin/MedicalRecords/UserDetail';
-import Navbar from './doctor/Navbar';
+import Navbar from './medicalStaff/Navbar';
 
 
 const router = createBrowserRouter([
@@ -49,8 +49,8 @@ const router = createBrowserRouter([
         element: <ConsultationHistory />,
       },
       {
-        path: 'pending',
-        element: <PendingRequirements />,
+        path: 'appointmentBooking',
+        element: <AppointmentBooking />,
       },
       {
         path: 'profile',
@@ -76,7 +76,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'Inventory',
-        element: <InventorySystem />,  // Use the imported InventorySystem here
+        element: <InventorySystem />, 
       },
       {
         path: 'ManageMedicalRecords',
@@ -95,7 +95,7 @@ const router = createBrowserRouter([
   },
   
   {
-    path: '/doctor',
+    path: '/medicalStaff',
     element: <Navbar />,
     children: [
       {

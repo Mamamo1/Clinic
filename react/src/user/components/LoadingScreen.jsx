@@ -64,8 +64,6 @@ const LoadingScreen = () => {
               alt="NU Logo"
               className="w-24 h-24 animate-spin-slow"
             />
-            {/* Rotating ring around logo */}
-            <div className="absolute inset-0 border-4 border-transparent border-t-yellow-400 border-r-yellow-400 rounded-full animate-spin"></div>
             {/* Pulsing background */}
             <div
               className={`absolute inset-0 bg-gradient-to-r ${getLoadingColor()} rounded-full animate-pulse scale-150`}

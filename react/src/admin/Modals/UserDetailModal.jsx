@@ -14,8 +14,6 @@ const UserDetailModal = ({ user, onClose }) => {
         return <div className="mt-4">Medical history content goes here...</div>;
       case 'records':
         return <div className="mt-4">Medical records content goes here...</div>;
-      case 'certificate':
-        return <div className="mt-4">Medical certificate content goes here...</div>;
       case 'dental':
         return <div className="mt-4">Dental records content goes here...</div>;
       default:

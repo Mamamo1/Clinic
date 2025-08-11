@@ -1,5 +1,3 @@
-"use client"
-
 import { useEffect, useState } from "react"
 import { FaUserGraduate, FaUserMd, FaFileMedical, FaExclamationTriangle, FaUsers } from "react-icons/fa"
 import axios from "axios"

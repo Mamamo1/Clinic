@@ -31,8 +31,8 @@ class MedicalRecordController extends Controller
             $record = MedicalRecord::create([
                 'user_id' => $data['user_id'],
                 'physician_nurse_id' => $data['physician_nurse'],
-                'visit_date' => $data['date'],              // Map to correct column
-                'reason_for_visit' => $data['reason'],      // Map to correct column
+                'visit_date' => $data['date'],              
+                'reason_for_visit' => $data['reason'],      
                 'temperature' => $data['temperature'] ?? null,
                 'blood_pressure' => $data['bloodPressure'] ?? null,
                 'allergies' => $data['allergies'] ?? null,
@@ -197,3 +197,4 @@ class MedicalRecordController extends Controller
         }
     }
 }
+

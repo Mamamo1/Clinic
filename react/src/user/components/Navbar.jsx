@@ -4,6 +4,9 @@ import { useEffect, useState, useRef } from "react"
 import axios from "axios"
 import "../../index.css"
 import { capitalizeWords } from "../../utils"
+import { useLoading } from "../../user/components/LoadingContext"
+import LoadingScreen from "../../user/components/LoadingScreen"
+
 
 export default function UserDashboard() {
   const navigate = useNavigate()
@@ -11,7 +14,7 @@ export default function UserDashboard() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const { loading, showLoading, hideLoading } = useLoading()
   const [notifications, setNotifications] = useState([])
   const dropdownRef = useRef(null)
   const notifRef = useRef(null)
@@ -54,41 +57,26 @@ export default function UserDashboard() {
   }, [navigate])
 
   const handleLogout = () => {
-    setLoading(true)
-    const authToken = localStorage.getItem("auth_token")
-    axios
-      .post("http://localhost:8000/api/logout", {}, { headers: { Authorization: `Bearer ${authToken}` } })
-      .then(() => {
-        localStorage.removeItem("auth_token")
-        setLoading(false)
-        navigate("/login")
-      })
-      .catch(() => {
-        localStorage.removeItem("auth_token")
-        setLoading(false)
-        navigate("/login")
-      })
-  }
+  showLoading();
+  const authToken = localStorage.getItem("auth_token");
+
+  axios
+    .post("http://localhost:8000/api/logout", {}, { headers: { Authorization: `Bearer ${authToken}` } })
+    .then(() => {
+      localStorage.removeItem("auth_token");
+      hideLoading();
+      navigate("/login");
+    })
+    .catch(() => {
+      localStorage.removeItem("auth_token");
+      hideLoading();
+      navigate("/login");
+    });
+};
 
   return (
     <div>
-      {loading && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="flex flex-col justify-center items-center bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20">
-            <div className="relative">
-              <img
-                src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/NU_shield.svg/800px-NU_shield.svg.png"
-                alt="NU Logo"
-                className="w-24 h-24 animate-spin"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 to-blue-600/20 rounded-full animate-pulse"></div>
-            </div>
-            <p className="mt-6 text-white text-center font-bold text-xl">Processing...</p>
-            <p className="text-yellow-300 text-sm mt-2">Please wait a moment</p>
-          </div>
-        </div>
-      )}
-
+      {loading && <LoadingScreen />}
       {/* Enhanced Navbar */}
       <nav className="bg-gradient-to-r from-blue-800 via-blue-900 to-blue-800 text-white shadow-2xl border-b-4 border-yellow-400 relative">
         {/* Decorative top border */}
@@ -115,62 +103,63 @@ export default function UserDashboard() {
             </div>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-6">
+            <div className="hidden md:flex items-center spacze-x-6">
               {/* Notification Bell */}
-              <div className="relative" ref={notifRef}>
-                <button
-                  onClick={() => setNotifOpen(!notifOpen)}
-                  className="relative p-2 rounded-full hover:bg-white/10 transition-all duration-300 group"
-                >
-                  <Bell className="h-6 w-6 text-white group-hover:text-yellow-300 transition-colors" />
-                  {notifications.length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold shadow-lg animate-pulse">
-                      {notifications.length > 9 ? "9+" : notifications.length}
-                    </span>
-                  )}
-                </button>
+          <div className="relative hidden md:block" ref={notifRef}>
+            <button
+              onClick={() => setNotifOpen(!notifOpen)}
+              className="relative p-2 rounded-full hover:bg-white/10 transition-all duration-300 group"
+            >
+              <Bell className="h-6 w-6 text-white group-hover:text-yellow-300 transition-colors" />
+              {notifications.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold shadow-lg animate-pulse">
+                  {notifications.length > 9 ? "9+" : notifications.length}
+                </span>
+              )}
+            </button>
 
-                {/* Enhanced Notification Dropdown */}
-                {notifOpen && (
-                  <div className="absolute right-0 mt-3 w-96 bg-white text-black rounded-2xl shadow-2xl z-50 max-h-96 overflow-hidden border border-gray-200">
-                    <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-t-2xl">
-                      <h3 className="font-bold text-lg flex items-center gap-2">
-                        <Bell className="h-5 w-5" />
-                        Notifications
-                        {notifications.length > 0 && (
-                          <span className="bg-yellow-400 text-blue-900 text-xs px-2 py-1 rounded-full font-bold">
-                            {notifications.length}
-                          </span>
-                        )}
-                      </h3>
+            {/* Notification Dropdown (Desktop Only) */}
+            {notifOpen && (
+              <div className="absolute right-0 mt-3 w-96 bg-white text-black rounded-2xl shadow-2xl z-50 max-h-96 overflow-hidden border border-gray-200">
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-t-2xl">
+                  <h3 className="font-bold text-lg flex items-center gap-2">
+                    <Bell className="h-5 w-5" />
+                    Notifications
+                    {notifications.length > 0 && (
+                      <span className="bg-yellow-400 text-blue-900 text-xs px-2 py-1 rounded-full font-bold">
+                        {notifications.length}
+                      </span>
+                    )}
+                  </h3>
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <Bell className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-gray-500 font-medium">No new notifications</p>
+                      <p className="text-gray-400 text-sm">You're all caught up!</p>
                     </div>
-                    <div className="max-h-80 overflow-y-auto">
-                      {notifications.length === 0 ? (
-                        <div className="p-8 text-center">
-                          <Bell className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                          <p className="text-gray-500 font-medium">No new notifications</p>
-                          <p className="text-gray-400 text-sm">You're all caught up!</p>
-                        </div>
-                      ) : (
-                        notifications.map((notif, index) => (
-                          <div
-                            key={notif.id}
-                            className={`p-4 hover:bg-blue-50 transition-colors border-b border-gray-100 ${
-                              index === notifications.length - 1 ? "border-b-0" : ""
-                            }`}
-                          >
-                            <p className="text-sm text-gray-800 font-medium mb-1">{notif.message}</p>
-                            <p className="text-xs text-gray-500 flex items-center gap-1">
-                              <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
-                              {new Date(notif.created_at).toLocaleString()}
-                            </p>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
+                  ) : (
+                    notifications.map((notif, index) => (
+                      <div
+                        key={notif.id}
+                        className={`p-4 hover:bg-blue-50 transition-colors border-b border-gray-100 ${
+                          index === notifications.length - 1 ? "border-b-0" : ""
+                        }`}
+                      >
+                        <p className="text-sm text-gray-800 font-medium mb-1">{notif.message}</p>
+                        <p className="text-xs text-gray-500 flex items-center gap-1">
+                          <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+                          {new Date(notif.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
+            )}
+          </div>
+
 
               {/* User Greeting */}
               <div className="hidden lg:block">
@@ -207,16 +196,6 @@ export default function UserDashboard() {
                       </div>
                     </div>
                     <div className="py-2">
-                      <button
-                        onClick={() => {
-                          setDropdownOpen(false)
-                          navigate("/user/profile", { replace: true })
-                        }}
-                        className="flex items-center px-4 py-3 hover:bg-blue-50 w-full transition-colors group"
-                      >
-                        <UserIcon className="h-5 w-5 mr-3 text-blue-600 group-hover:text-blue-700" />
-                        <span className="font-medium">My Profile</span>
-                      </button>
                       <button
                         onClick={() => {
                           setDropdownOpen(false)

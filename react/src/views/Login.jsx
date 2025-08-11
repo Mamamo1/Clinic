@@ -41,26 +41,22 @@ export default function NULogin() {
     const accountType = localStorage.getItem("account_type")
     if (userToken) {
       switch (accountType) {
-        case "SuperAdmin":
-          navigate("/admin")
-          break
-        case "Doctor":
-          navigate("/doctor")
-          break
-        case "Nurse":
-          navigate("/nurse")
-          break
-        case "Dentist":
-          navigate("/dentist")
-          break
-        case "SHS":
-        case "College":
-        case "Employee":
-          navigate("/user")
-          break
-        default:
-          navigate("/user")
-      }
+          case "SuperAdmin":
+            navigate("/admin")
+            break
+          case "Doctor":
+          case "Nurse":
+          case "Dentist":
+            navigate("/medicalStaff")
+            break
+          case "SHS":
+          case "College":
+          case "Employee":
+            navigate("/user")
+            break
+          default:
+            navigate("/user")
+        }
     }
   }, [navigate])
 
@@ -101,27 +97,23 @@ export default function NULogin() {
 
         // Redirect based on account type
         switch (accountType) {
-          case "SuperAdmin":
-            navigate("/admin")
-            break
-          case "Doctor":
-            navigate("/doctor")
-            break
-          case "Nurse":
-            navigate("/nurse")
-            break
-          case "Dentist":
-            navigate("/dentist")
-            break
-          case "SHS":
-          case "College":
-          case "Employee":
-            navigate("/user")
-            break
-          default:
-            navigate("/user")
-        }
-      } else {
+            case "SuperAdmin":
+              navigate("/admin")
+              break
+            case "Doctor":
+            case "Nurse":
+            case "Dentist":
+              navigate("/medicalStaff")
+              break
+            case "SHS":
+            case "College":
+            case "Employee":
+              navigate("/user")
+              break
+            default:
+              navigate("/user")
+          }
+        } else {
         if (response.data.error === "Invalid email") {
           setGeneralError("Invalid email or username.")
         } else if (response.data.error === "Invalid password") {
@@ -320,7 +312,7 @@ export default function NULogin() {
                     Signing in...
                   </div>
                 ) : (
-                  "🏥 Sign in to NU-CARES"
+                  " Sign in to NU-CARES"
                 )}
               </button>
             </form>

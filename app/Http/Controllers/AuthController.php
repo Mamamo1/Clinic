@@ -115,7 +115,7 @@ class AuthController extends Controller
             'last_name' => $user->last_name,
             'salutation' => $user->salutation,
             'gender' => $user->gender,
-            'date_of_birth' => $user->date_of_birth,
+            'dob' => $user->date_of_birth,
             'email' => $user->email,
             'student_number' => $user->student_number,
             'course' => $user->course,

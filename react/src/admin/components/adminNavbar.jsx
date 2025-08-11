@@ -1,6 +1,6 @@
 "use client"
 
-import { UserIcon, LogOut, ChevronDown, Settings } from "lucide-react"
+import { UserIcon, Bell,  LogOut, ChevronDown, Settings } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { useEffect, useState, useRef } from "react"
 import axios from "axios"
@@ -14,6 +14,9 @@ export default function AdminNavbar() {
   const [adminName, setAdminName] = useState("Administrator")
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef(null)
+  const [notifications, setNotifications] = useState([])
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef(null);
   const { loading, showLoading, hideLoading } = useLoading()
 
   useEffect(() => {
@@ -34,9 +37,12 @@ export default function AdminNavbar() {
     }
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setDropdownOpen(false)
+        setDropdownOpen(false);
       }
-    }
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setNotifOpen(false);
+      }
+      };
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [navigate])
@@ -87,10 +93,67 @@ export default function AdminNavbar() {
                 <div className="absolute inset-0 bg-yellow-400/20 rounded-full scale-0 group-hover:scale-150 transition-transform duration-500 opacity-0 group-hover:opacity-100"></div>
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-white">NU-CARES Admin</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-white">NU-CARES</h1>
                 <p className="text-yellow-300 text-xs font-medium hidden sm:block">System Management</p>
               </div>
             </div>
+            
+            <div className="flex items-center space-x-6">
+            {/* Notification Bell */}
+              <div className="relative" ref={notifRef}>
+                <button
+                  onClick={() => setNotifOpen(!notifOpen)}
+                  className="relative p-2 rounded-full hover:bg-white/10 transition-all duration-300 group"
+                >
+                  <Bell className="h-6 w-6 text-white group-hover:text-yellow-300 transition-colors" />
+                  {notifications.length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold shadow-lg animate-pulse">
+                      {notifications.length > 9 ? "9+" : notifications.length}
+                    </span>
+                  )}
+                </button>
+
+                {/* Enhanced Notification Dropdown */}
+                {notifOpen && (
+                  <div className="absolute right-0 mt-3 w-96 bg-white text-black rounded-2xl shadow-2xl z-50 max-h-96 overflow-hidden border border-gray-200">
+                    <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-t-2xl">
+                      <h3 className="font-bold text-lg flex items-center gap-2">
+                        <Bell className="h-5 w-5" />
+                        Notifications
+                        {notifications.length > 0 && (
+                          <span className="bg-yellow-400 text-blue-900 text-xs px-2 py-1 rounded-full font-bold">
+                            {notifications.length}
+                          </span>
+                        )}
+                      </h3>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-8 text-center">
+                          <Bell className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-gray-500 font-medium">No new notifications</p>
+                          <p className="text-gray-400 text-sm">You're all caught up!</p>
+                        </div>
+                      ) : (
+                        notifications.map((notif, index) => (
+                          <div
+                            key={notif.id}
+                            className={`p-4 hover:bg-blue-50 transition-colors border-b border-gray-100 ${
+                              index === notifications.length - 1 ? "border-b-0" : ""
+                            }`}
+                          >
+                            <p className="text-sm text-gray-800 font-medium mb-1">{notif.message}</p>
+                            <p className="text-xs text-gray-500 flex items-center gap-1">
+                              <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+                              {new Date(notif.created_at).toLocaleString()}
+                            </p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
 
             {/* Right: Admin Greeting & Profile Dropdown */}
             <div className="flex items-center space-x-6">
@@ -159,6 +222,7 @@ export default function AdminNavbar() {
                 )}
               </div>
             </div>
+          </div>
           </div>
         </div>
       </nav>
