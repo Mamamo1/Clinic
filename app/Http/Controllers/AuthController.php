@@ -28,11 +28,9 @@ class AuthController extends Controller
             'date_of_birth'  => $data['dob'],
             'mobile'         => $data['mobile'],
             'gender'         => $data['gender'],
-            'salutation'     => $data['salutation'],
             'street'         => $data['street'],
             'city'           => $data['city'],
             'state'          => $data['state'],
-            'zipcode'        => $data['zipcode'],
             'telephone'      => $data['telephone'],
         ];
         if (in_array($data['account_type'], ['SHS', 'College'])) {
@@ -113,7 +111,6 @@ class AuthController extends Controller
             'first_name' => $user->first_name,
             'middle_name' => $user->middle_name,
             'last_name' => $user->last_name,
-            'salutation' => $user->salutation,
             'gender' => $user->gender,
             'dob' => $user->date_of_birth,
             'email' => $user->email,
@@ -122,7 +119,6 @@ class AuthController extends Controller
             'employee_id' => $user->employee_id,
             'mobile' => $user->mobile,
             'telephone' => $user->telephone,
-            'zipcode' => $user->zipcode,
             'state' => $user->state,
             'city' => $user->city,
             'street' => $user->street,

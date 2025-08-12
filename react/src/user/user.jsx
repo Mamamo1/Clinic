@@ -106,6 +106,12 @@ export default function UserDashboard() {
               onClick={() => navigate("/user/appointmentBooking")}
             />
             <CustomCard
+              icon={<Calendar className="h-9 w-9" />}
+              title="View Appointments"
+              subtitle="Check your upcoming and past appointments."
+              onClick={() => navigate("/user/viewAppointments")}
+            />
+            <CustomCard
               icon={<FileText className="h-9 w-9" />}
               title="Consultation History"
               subtitle="Review previous medical consultations, doctor's notes, and treatment history."

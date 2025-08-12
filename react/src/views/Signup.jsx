@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import React from "react"
+
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { NavLink, useNavigate } from "react-router-dom"
 import { FaUserPlus, FaCheck, FaExclamationCircle, FaStethoscope, FaGraduationCap } from "react-icons/fa"
 import axios from "axios"
@@ -15,94 +17,98 @@ const LoadingScreen = () => (
   </div>
 )
 
-// Move InputField component OUTSIDE to prevent recreation on every render
-const InputField = ({
-  label,
-  name,
-  type = "text",
-  required = false,
-  options = null,
-  children = null,
-  onChange,
-  value,
-  hasError,
-  isValid,
-  errorMessage,
-  ...props
-}) => {
-  return (
-    <div className="mb-6">
-      <label className="block text-sm font-semibold text-blue-900 mb-2">
-        {label}
-        {required && <span className="text-yellow-600 ml-1 text-lg font-bold">*</span>}
-      </label>
-      {type === "select" ? (
-        <select
-          name={name}
-          value={value}
-          onChange={onChange}
-          className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-3 focus:ring-yellow-400 focus:border-blue-800 transition-all duration-200 ${
-            hasError
-              ? "border-red-500 bg-red-50"
-              : isValid
-                ? "border-green-500 bg-green-50"
-                : "border-blue-200 bg-white hover:border-blue-400"
-          }`}
-          {...props}
-        >
-          {options &&
-            options.map((option, index) => (
-              <option key={index} value={option.value || option}>
-                {option.text || option}
-              </option>
-            ))}
-          {children}
-        </select>
-      ) : type === "textarea" ? (
-        <textarea
-          name={name}
-          value={value}
-          onChange={onChange}
-          className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-3 focus:ring-yellow-400 focus:border-blue-800 transition-all duration-200 resize-none ${
-            hasError
-              ? "border-red-500 bg-red-50"
-              : isValid
-                ? "border-green-500 bg-green-50"
-                : "border-blue-200 bg-white hover:border-blue-400"
-          }`}
-          {...props}
-        />
-      ) : (
-        <input
-          type={type}
-          name={name}
-          value={value}
-          onChange={onChange}
-          className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-3 focus:ring-yellow-400 focus:border-blue-800 transition-all duration-200 ${
-            hasError
-              ? "border-red-500 bg-red-50"
-              : isValid
-                ? "border-green-500 bg-green-50"
-                : "border-blue-200 bg-white hover:border-blue-400"
-          }`}
-          {...props}
-        />
-      )}
-      {hasError && (
-        <div className="flex items-center mt-2 text-red-600 text-sm font-medium">
-          <FaExclamationCircle className="mr-2 text-base" />
-          {errorMessage}
-        </div>
-      )}
-      {isValid && (
-        <div className="flex items-center mt-2 text-green-600 text-sm font-medium">
-          <FaCheck className="mr-2 text-base" />
-          Looks good!
-        </div>
-      )}
-    </div>
-  )
-}
+// Memoized InputField component to prevent unnecessary re-renders
+const InputField = React.memo(
+  ({
+    label,
+    name,
+    type = "text",
+    required = false,
+    options = null,
+    children = null,
+    onChange,
+    value,
+    hasError,
+    isValid,
+    errorMessage,
+    ...props
+  }) => {
+    return (
+      <div className="mb-6">
+        <label className="block text-sm font-semibold text-blue-900 mb-2">
+          {label}
+          {required && <span className="text-yellow-600 ml-1 text-lg font-bold">*</span>}
+        </label>
+        {type === "select" ? (
+          <select
+            name={name}
+            value={value}
+            onChange={onChange}
+            className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-3 focus:ring-yellow-400 focus:border-blue-800 transition-all duration-200 ${
+              hasError
+                ? "border-red-500 bg-red-50"
+                : isValid
+                  ? "border-green-500 bg-green-50"
+                  : "border-blue-200 bg-white hover:border-blue-400"
+            }`}
+            {...props}
+          >
+            {options &&
+              options.map((option, index) => (
+                <option key={index} value={option.value || option}>
+                  {option.text || option}
+                </option>
+              ))}
+            {children}
+          </select>
+        ) : type === "textarea" ? (
+          <textarea
+            name={name}
+            value={value}
+            onChange={onChange}
+            className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-3 focus:ring-yellow-400 focus:border-blue-800 transition-all duration-200 resize-none ${
+              hasError
+                ? "border-red-500 bg-red-50"
+                : isValid
+                  ? "border-green-500 bg-green-50"
+                  : "border-blue-200 bg-white hover:border-blue-400"
+            }`}
+            {...props}
+          />
+        ) : (
+          <input
+            type={type}
+            name={name}
+            value={value}
+            onChange={onChange}
+            className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-3 focus:ring-yellow-400 focus:border-blue-800 transition-all duration-200 ${
+              hasError
+                ? "border-red-500 bg-red-50"
+                : isValid
+                  ? "border-green-500 bg-green-50"
+                  : "border-blue-200 bg-white hover:border-blue-400"
+            }`}
+            {...props}
+          />
+        )}
+        {hasError && (
+          <div className="flex items-center mt-2 text-red-600 text-sm font-medium">
+            <FaExclamationCircle className="mr-2 text-base" />
+            {errorMessage}
+          </div>
+        )}
+        {isValid && (
+          <div className="flex items-center mt-2 text-green-600 text-sm font-medium">
+            <FaCheck className="mr-2 text-base" />
+            Looks good!
+          </div>
+        )}
+      </div>
+    )
+  },
+)
+
+InputField.displayName = "InputField"
 
 export default function NUSignupForm() {
   const navigate = useNavigate()
@@ -121,11 +127,9 @@ export default function NUSignupForm() {
     mobile: "",
     gender: "",
     nationality: "Filipino",
-    salutation: "",
     street: "",
     city: "",
     state: "",
-    zipcode: "",
     telephone: "",
     account_type: "",
   })
@@ -136,6 +140,38 @@ export default function NUSignupForm() {
   const [validationErrors, setValidationErrors] = useState({})
   const [touchedFields, setTouchedFields] = useState({})
 
+  // Memoized course data to prevent recreation on every render
+  const courseData = useMemo(
+    () => ({
+      shsCourses: [
+        { value: "ABM", text: "ABM - Accountancy, Business and Management" },
+        { value: "STEM", text: "STEM - Science, Technology, Engineering and Mathematics" },
+        { value: "HUMSS", text: "HUMSS - Humanities and Social Sciences" },
+      ],
+      collegeDepartments: {
+        "SABM (School of Accountancy, Business, and Management)": [
+          { value: "BSA", text: "(BSA) Bachelor of Science in Accountancy" },
+          { value: "BSBA-FINMGT", text: "(BSBA-FINMGT) BSBA Major in Financial Management" },
+          { value: "BSBA-MKTGMGT", text: "(BSBA-MKTGMGT) BSBA Major in Marketing Management" },
+          { value: "BSTM", text: "(BSTM) BS in Tourism Management" },
+        ],
+        "SACE (School of Architecture, Computing, and Engineering)": [
+          { value: "BSARCH", text: "(BSARCH) BS in Architecture" },
+          { value: "BSCE", text: "(BSCE) BS in Civil Engineering" },
+          { value: "BSCS", text: "(BSCS) BS in Computer Science" },
+          { value: "BSIT-MWA", text: "(BSIT-MWA) BSIT with Mobile/Web App Development" },
+        ],
+        "SAHS (School of Allied Health and Science)": [
+          { value: "BSMT", text: "(BSMT) BS in Medical Technology" },
+          { value: "BSN", text: "(BSN) BS in Nursing" },
+          { value: "BSPSY", text: "(BSPSY) BS in Psychology" },
+        ],
+      },
+    }),
+    [],
+  )
+
+  // Check authentication on mount
   useEffect(() => {
     const userToken = localStorage.getItem("auth_token")
     if (userToken) {
@@ -143,7 +179,7 @@ export default function NUSignupForm() {
     }
   }, [navigate])
 
-  // Real-time validation
+  // Enhanced validation with better error messages
   const validateField = useCallback(
     (name, value) => {
       const errors = {}
@@ -154,6 +190,9 @@ export default function NUSignupForm() {
             errors.email = "Email is required"
           } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
             errors.email = "Please enter a valid email address"
+          } else if (!value.toLowerCase().includes("nu-lipa.edu.ph") && !value.toLowerCase().includes("gmail.com")) {
+            // Allow both NU email and Gmail for flexibility
+            errors.email = "Please use your NU email or a valid Gmail address"
           }
           break
 
@@ -162,6 +201,8 @@ export default function NUSignupForm() {
             errors.password = "Password is required"
           } else if (value.length < 8) {
             errors.password = "Password must be at least 8 characters long"
+          } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)) {
+            errors.password = "Password must contain uppercase, lowercase, and number"
           }
           break
 
@@ -177,45 +218,58 @@ export default function NUSignupForm() {
         case "lastName":
           if (!value.trim()) {
             errors[name] = `${name === "firstName" ? "First" : "Last"} name is required`
+          } else if (value.trim().length < 2) {
+            errors[name] = `${name === "firstName" ? "First" : "Last"} name must be at least 2 characters`
           }
           break
 
         case "student_number":
           if (courseType !== "Employee" && !value.trim()) {
             errors.student_number = "Student number is required"
+          } else if (courseType !== "Employee" && !/^\d{4}-\d{6}$/.test(value)) {
+            errors.student_number = "Student number format: YYYY-XXXXXX (e.g., 2024-123456)"
           }
           break
 
         case "employee_id":
           if (courseType === "Employee" && !value.trim()) {
             errors.employee_id = "Employee ID is required"
+          } else if (courseType === "Employee" && value.length < 4) {
+            errors.employee_id = "Employee ID must be at least 4 characters"
           }
           break
 
         case "mobile":
           if (!value.trim()) {
             errors.mobile = "Mobile number is required"
-          } else if (!/^\d{10,11}$/.test(value.replace(/[-\s]/g, ""))) {
-            errors.mobile = "Please enter a valid mobile number"
+          } else if (!/^(09|\+639)\d{9}$/.test(value.replace(/[-\s]/g, ""))) {
+            errors.mobile = "Please enter a valid Philippine mobile number (09XXXXXXXXX)"
           }
           break
 
         case "dob":
           if (!value) {
             errors.dob = "Date of birth is required"
+          } else {
+            const birthDate = new Date(value)
+            const today = new Date()
+            const age = today.getFullYear() - birthDate.getFullYear()
+            if (age < 15 || age > 100) {
+              errors.dob = "Age must be between 15 and 100 years"
+            }
           }
           break
 
         case "city":
         case "state":
           if (!value.trim()) {
-            errors[name] = `${name === "city" ? "City" : "State"} is required`
+            errors[name] = `${name === "city" ? "City" : "Province"} is required`
           }
           break
 
-        case "zipcode":
-          if (!value.trim()) {
-            errors.zipcode = "Zipcode is required"
+        case "course":
+          if (courseType && courseType !== "Employee" && !value.trim()) {
+            errors.course = "Please select your academic program"
           }
           break
       }
@@ -225,25 +279,33 @@ export default function NUSignupForm() {
     [formData.password, courseType],
   )
 
+  // Optimized change handler with debouncing for validation
   const handleChange = useCallback(
     (e) => {
       const { name, value } = e.target
       let newValue = value
       const nameFields = ["firstName", "middleName", "lastName"]
-      const numberOnlyFields = ["student_number", "employee_id", "mobile", "telephone", "zipcode"]
+      const numberOnlyFields = ["student_number", "employee_id", "mobile", "telephone"]
       const capitalizeFields = ["firstName", "middleName", "lastName", "street", "city", "state"]
 
-      // Disallow numbers in name fields
+      // Input sanitization
       if (nameFields.includes(name)) {
         newValue = newValue.replace(/[0-9]/g, "")
       }
 
-      // Only allow digits and hyphens for number fields
       if (numberOnlyFields.includes(name)) {
-        newValue = newValue.replace(/[^0-9-]/g, "").slice(0, 11)
+        if (name === "student_number") {
+          // Format student number as YYYY-XXXXXX
+          newValue = newValue.replace(/[^0-9-]/g, "")
+          if (newValue.length === 4 && !newValue.includes("-")) {
+            newValue += "-"
+          }
+          newValue = newValue.slice(0, 11)
+        } else {
+          newValue = newValue.replace(/[^0-9-+]/g, "").slice(0, 15)
+        }
       }
 
-      // Capitalize first letter of each word
       if (capitalizeFields.includes(name)) {
         newValue = newValue.replace(/\b\w/g, (char) => char.toUpperCase())
       }
@@ -257,12 +319,14 @@ export default function NUSignupForm() {
       // Mark field as touched
       setTouchedFields((prev) => ({ ...prev, [name]: true }))
 
-      // Validate field
-      const fieldErrors = validateField(name, newValue)
-      setValidationErrors((prev) => ({
-        ...prev,
-        [name]: fieldErrors[name] || undefined,
-      }))
+      // Debounced validation
+      setTimeout(() => {
+        const fieldErrors = validateField(name, newValue)
+        setValidationErrors((prev) => ({
+          ...prev,
+          [name]: fieldErrors[name] || undefined,
+        }))
+      }, 300)
     },
     [validateField],
   )
@@ -279,7 +343,7 @@ export default function NUSignupForm() {
       ...prev,
       course: "",
       account_type: accountType,
-      student_number: selected !== "Employee" ? "" : prev.student_number,
+      student_number: selected !== "Employee" ? prev.student_number : "",
       employee_id: selected === "Employee" ? prev.employee_id : "",
     }))
 
@@ -310,13 +374,13 @@ export default function NUSignupForm() {
         Object.assign(errors, fieldErrors)
       })
     } else if (currentStep === 2) {
-      const requiredFields = ["salutation", "firstName", "lastName", "gender", "dob"]
+      const requiredFields = ["firstName", "lastName", "gender", "dob"]
       requiredFields.forEach((field) => {
         const fieldErrors = validateField(field, formData[field])
         Object.assign(errors, fieldErrors)
       })
     } else if (currentStep === 3) {
-      const requiredFields = ["street", "city", "state", "zipcode", "mobile"]
+      const requiredFields = ["street", "city", "state", "mobile"]
       requiredFields.forEach((field) => {
         const fieldErrors = validateField(field, formData[field])
         Object.assign(errors, fieldErrors)
@@ -348,28 +412,40 @@ export default function NUSignupForm() {
     setCurrentStep((prev) => Math.max(prev - 1, 1))
   }, [])
 
+  // Enhanced submit handler with better error handling
   const handleSubmit = async (e) => {
     e.preventDefault()
+
     if (!agreeToTerms) {
-      Swal.fire("Error", "You must agree to the terms and conditions.", "error")
+      await Swal.fire({
+        title: "Terms Required",
+        text: "You must agree to the terms and conditions to proceed.",
+        icon: "warning",
+        confirmButtonColor: "#1e40af",
+      })
       return
     }
 
     const allErrors = validateCurrentStep()
     if (Object.keys(allErrors).length > 0) {
       setValidationErrors(allErrors)
+      await Swal.fire({
+        title: "Validation Error",
+        text: "Please fix the errors in the form before submitting.",
+        icon: "error",
+        confirmButtonColor: "#1e40af",
+      })
       return
     }
 
     setLoading(true)
 
-    // Build payload conditionally - only include fields that have values
+    // Build payload conditionally
     const payload = {
-      salutation: formData.salutation?.trim(),
       first_name: formData.firstName?.trim(),
-      middle_name: formData.middleName?.trim(),
+      middle_name: formData.middleName?.trim() || null,
       last_name: formData.lastName?.trim(),
-      email: formData.email?.trim(),
+      email: formData.email?.trim().toLowerCase(),
       password: formData.password,
       password_confirmation: formData.password_confirmation,
       dob: formData.dob,
@@ -379,79 +455,88 @@ export default function NUSignupForm() {
       street: formData.street?.trim(),
       city: formData.city?.trim(),
       state: formData.state?.trim(),
-      zipcode: formData.zipcode?.trim(),
-      telephone: formData.telephone?.trim(),
+      telephone: formData.telephone?.trim() || null,
       account_type: formData.account_type,
     }
 
-    // Only include student_number if it's not empty (for students)
+    // Conditionally add fields based on account type
     if (formData.student_number?.trim()) {
       payload.student_number = formData.student_number.trim()
     }
 
-    // Only include employee_id if it's not empty (for employees)
     if (formData.employee_id?.trim()) {
       payload.employee_id = formData.employee_id.trim()
     }
 
-    // Only include course if it's not empty (for students)
     if (formData.course?.trim()) {
       payload.course = formData.course.trim()
     }
 
     try {
-      const response = await axios.post("http://localhost:8000/api/signup", payload)
+      const response = await axios.post("http://localhost:8000/api/signup", payload, {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        timeout: 10000, // 10 second timeout
+      })
+
       if (response.data?.success === true) {
         setLoading(false)
-        Swal.fire("Success", "Registration successful! You can now log in.", "success").then(() => {
-          navigate("/login")
+        await Swal.fire({
+          title: "Registration Successful!",
+          text: "Welcome to NU-CARES! You can now log in with your credentials.",
+          icon: "success",
+          confirmButtonColor: "#059669",
+          confirmButtonText: "Go to Login",
         })
+        navigate("/login")
       } else {
         setLoading(false)
-        Swal.fire("Error", response.data?.message || "Registration failed", "error")
+        await Swal.fire({
+          title: "Registration Failed",
+          text: response.data?.message || "Please check your information and try again.",
+          icon: "error",
+          confirmButtonColor: "#1e40af",
+        })
       }
     } catch (error) {
       setLoading(false)
-      const message = error.response?.data?.message || "Something went wrong!"
-      Swal.fire("Error", message, "error")
+      console.error("Registration error:", error)
+
+      let errorMessage = "Something went wrong! Please try again."
+
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (error.response?.data?.errors) {
+        // Handle Laravel validation errors
+        const errors = error.response.data.errors
+        errorMessage = Object.values(errors).flat().join(", ")
+      } else if (error.code === "ECONNABORTED") {
+        errorMessage = "Request timeout. Please check your connection and try again."
+      } else if (!error.response) {
+        errorMessage = "Network error. Please check your internet connection."
+      }
+
+      await Swal.fire({
+        title: "Registration Error",
+        text: errorMessage,
+        icon: "error",
+        confirmButtonColor: "#1e40af",
+      })
     }
   }
 
-  const shsCourses = [
-    { value: "ABM", text: "ABM - Accountancy, Business and Management" },
-    { value: "STEM", text: "STEM - Science, Technology, Engineering and Mathematics" },
-    { value: "HUMSS", text: "HUMSS - Humanities and Social Sciences" },
-  ]
-
-  const collegeDepartments = {
-    "SABM (School of Accountancy, Business, and Management)": [
-      { value: "BSA", text: "(BSA) Bachelor of Science in Accountancy" },
-      { value: "BSBA-FINMGT", text: "(BSBA-FINMGT) BSBA Major in Financial Management" },
-      { value: "BSBA-MKTGMGT", text: "(BSBA-MKTGMGT) BSBA Major in Marketing Management" },
-      { value: "BSTM", text: "(BSTM) BS in Tourism Management" },
-    ],
-    "SACE (School of Architecture, Computing, and Engineering)": [
-      { value: "BSARCH", text: "(BSARCH) BS in Architecture" },
-      { value: "BSCE", text: "(BSCE) BS in Civil Engineering" },
-      { value: "BSCS", text: "(BSCS) BS in Computer Science" },
-      { value: "BSIT-MWA", text: "(BSIT-MWA) BSIT with Mobile/Web App Development" },
-    ],
-    "SAHS (School of Allied Health and Science)": [
-      { value: "BSMT", text: "(BSMT) BS in Medical Technology" },
-      { value: "BSN", text: "(BSN) BS in Nursing" },
-      { value: "BSPSY", text: "(BSPSY) BS in Psychology" },
-    ],
-  }
-
-  const renderCourses = () => {
+  // Memoized course rendering function
+  const renderCourses = useMemo(() => {
     if (courseType === "SHS") {
-      return shsCourses.map((c) => (
+      return courseData.shsCourses.map((c) => (
         <option key={c.value} value={c.value}>
           {c.text}
         </option>
       ))
     } else if (courseType === "College") {
-      return Object.entries(collegeDepartments).map(([dept, courses]) => (
+      return Object.entries(courseData.collegeDepartments).map(([dept, courses]) => (
         <optgroup key={dept} label={dept}>
           {courses.map((c) => (
             <option key={c.value} value={c.value}>
@@ -461,11 +546,12 @@ export default function NUSignupForm() {
         </optgroup>
       ))
     } else {
-      return <option disabled>No courses available</option>
+      return <option disabled>Select account type first</option>
     }
-  }
+  }, [courseType, courseData])
 
-  const ProgressBar = () => {
+  // Memoized progress bar component
+  const ProgressBar = useMemo(() => {
     const progress = (currentStep / 3) * 100
 
     return (
@@ -493,7 +579,7 @@ export default function NUSignupForm() {
         </div>
       </div>
     )
-  }
+  }, [currentStep])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
@@ -545,7 +631,7 @@ export default function NUSignupForm() {
           <div className="h-4 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-400"></div>
 
           <div className="p-6 sm:p-10">
-            <ProgressBar />
+            {ProgressBar}
 
             <form onSubmit={handleSubmit}>
               {/* Step 1: User Credentials */}
@@ -565,7 +651,7 @@ export default function NUSignupForm() {
                     name="email"
                     type="email"
                     required
-                    autoComplete="new-email"
+                    autoComplete="email"
                     placeholder="Enter your email address"
                     value={formData.email}
                     onChange={handleChange}
@@ -633,8 +719,10 @@ export default function NUSignupForm() {
                     label={courseType === "Employee" ? "Employee ID Number" : "Student ID Number"}
                     name={courseType === "Employee" ? "employee_id" : "student_number"}
                     required
-                    autoComplete="new-student"
-                    placeholder={courseType === "Employee" ? "Enter your employee ID" : "Enter your student number"}
+                    autoComplete="username"
+                    placeholder={
+                      courseType === "Employee" ? "Enter your employee ID" : "Format: YYYY-XXXXXX (e.g., 2024-123456)"
+                    }
                     value={courseType === "Employee" ? formData.employee_id : formData.student_number}
                     onChange={handleChange}
                     hasError={
@@ -666,7 +754,7 @@ export default function NUSignupForm() {
                       errorMessage={validationErrors.course}
                     >
                       <option value="">Select Your Program</option>
-                      {renderCourses()}
+                      {renderCourses}
                     </InputField>
                   )}
                 </div>
@@ -683,26 +771,13 @@ export default function NUSignupForm() {
                     <p className="text-blue-600">Tell us about yourself</p>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                    <InputField
-                      key="salutation"
-                      label="Salutation"
-                      name="salutation"
-                      type="select"
-                      required
-                      value={formData.salutation}
-                      onChange={handleChange}
-                      hasError={touchedFields.salutation && validationErrors.salutation}
-                      isValid={touchedFields.salutation && !validationErrors.salutation && formData.salutation}
-                      errorMessage={validationErrors.salutation}
-                      options={[{ value: "", text: "Title" }, "Mr.", "Ms.", "Mrs."]}
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <InputField
                       key="firstName"
                       label="First Name"
                       name="firstName"
                       required
-                      autoComplete="new-firstname"
+                      autoComplete="given-name"
                       placeholder="First name"
                       value={formData.firstName}
                       onChange={handleChange}
@@ -715,7 +790,7 @@ export default function NUSignupForm() {
                       label="Last Name"
                       name="lastName"
                       required
-                      autoComplete="new-lastname"
+                      autoComplete="family-name"
                       placeholder="Last name"
                       value={formData.lastName}
                       onChange={handleChange}
@@ -729,7 +804,7 @@ export default function NUSignupForm() {
                     key="middleName"
                     label="Middle Name (Optional)"
                     name="middleName"
-                    autoComplete="new-middlename"
+                    autoComplete="additional-name"
                     placeholder="Middle name or initial"
                     value={formData.middleName}
                     onChange={handleChange}
@@ -763,6 +838,8 @@ export default function NUSignupForm() {
                       hasError={touchedFields.dob && validationErrors.dob}
                       isValid={touchedFields.dob && !validationErrors.dob && formData.dob}
                       errorMessage={validationErrors.dob}
+                      max={new Date(new Date().setFullYear(new Date().getFullYear() - 15)).toISOString().split("T")[0]}
+                      min={new Date(new Date().setFullYear(new Date().getFullYear() - 100)).toISOString().split("T")[0]}
                     />
                   </div>
                 </div>
@@ -786,7 +863,7 @@ export default function NUSignupForm() {
                     type="textarea"
                     required
                     rows={3}
-                    autoComplete="new-street"
+                    autoComplete="street-address"
                     placeholder="Street, Barangay"
                     value={formData.street}
                     onChange={handleChange}
@@ -801,7 +878,7 @@ export default function NUSignupForm() {
                       label="City/Municipality"
                       name="city"
                       required
-                      autoComplete="new-city"
+                      autoComplete="address-level2"
                       placeholder="City or Municipality"
                       value={formData.city}
                       onChange={handleChange}
@@ -814,7 +891,7 @@ export default function NUSignupForm() {
                       label="Province/State"
                       name="state"
                       required
-                      autoComplete="new-state"
+                      autoComplete="address-level1"
                       placeholder="Province or State"
                       value={formData.state}
                       onChange={handleChange}
@@ -826,38 +903,11 @@ export default function NUSignupForm() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <InputField
-                      key="zipcode"
-                      label="Postal Code"
-                      name="zipcode"
-                      required
-                      autoComplete="new-zipcode"
-                      placeholder="ZIP/Postal Code"
-                      value={formData.zipcode}
-                      onChange={handleChange}
-                      hasError={touchedFields.zipcode && validationErrors.zipcode}
-                      isValid={touchedFields.zipcode && !validationErrors.zipcode && formData.zipcode}
-                      errorMessage={validationErrors.zipcode}
-                    />
-                    <div className="mb-6">
-                      <label className="block text-sm font-semibold text-blue-900 mb-2">
-                        Country <span className="text-yellow-600 ml-1 text-lg font-bold">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value="Philippines"
-                        disabled
-                        className="w-full px-4 py-3 border-2 border-blue-200 rounded-lg bg-blue-50 text-blue-800 font-medium"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <InputField
                       key="mobile"
                       label="Mobile Number"
                       name="mobile"
                       required
-                      autoComplete="new-mobile"
+                      autoComplete="tel"
                       placeholder="09XX-XXX-XXXX"
                       value={formData.mobile}
                       onChange={handleChange}
@@ -869,7 +919,7 @@ export default function NUSignupForm() {
                       key="telephone"
                       label="Emergency Contact (Optional)"
                       name="telephone"
-                      autoComplete="new-telephone"
+                      autoComplete="tel"
                       placeholder="Landline or alternate number"
                       value={formData.telephone}
                       onChange={handleChange}

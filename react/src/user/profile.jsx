@@ -63,7 +63,6 @@ export default function UserProfile() {
           first_name: capitalizeWords(data.first_name),
           middle_name: capitalizeWords(data.middle_name),
           last_name: capitalizeWords(data.last_name),
-          salutation: capitalizeWords(data.salutation),
           gender: capitalizeWords(data.gender),
           nationality: capitalizeWords(data.nationality),
           street: capitalizeWords(data.street),
@@ -139,7 +138,7 @@ export default function UserProfile() {
           </div>
           <div className="text-center md:text-left flex-1">
             <h1 className="text-3xl sm:text-4xl font-bold text-blue-900 mb-2">
-              {userData.salutation} {userData.first_name} {userData.middle_name} {userData.last_name}
+              {userData.first_name} {userData.middle_name} {userData.last_name}
             </h1>
             <p className="text-blue-700 text-lg mb-4">
               {accountType === "Employee" ? (
@@ -182,13 +181,11 @@ export default function UserProfile() {
               <User className="w-6 h-6 mr-3 text-yellow-600" />
               Personal Information
             </h2>
-            {renderField("Salutation", userData.salutation, <User className="w-4 h-4" />)}
             {renderField("First Name", userData.first_name, <User className="w-4 h-4" />)}
             {renderField("Middle Name", userData.middle_name, <User className="w-4 h-4" />)}
             {renderField("Last Name", userData.last_name, <User className="w-4 h-4" />)}
             {renderField("Gender", userData.gender, <Gender className="w-4 h-4" />)}
             {renderField("Date of Birth", userData.dob, <Calendar className="w-4 h-4" />)}
-            {renderField("Country", "Philippines", <Globe className="w-4 h-4" />)}
           </div>
 
           {/* Address And Contacts */}
@@ -198,12 +195,10 @@ export default function UserProfile() {
               Address & Contacts
             </h2>
             {renderField("Mobile Number", userData.mobile, <Phone className="w-4 h-4" />)}
-            {renderField("Telephone", userData.telephone, <Phone className="w-4 h-4" />)}
+            {renderField("Emergency Contact", userData.telephone, <Phone className="w-4 h-4" />)}
             {renderField("Street", userData.street, <Home className="w-4 h-4" />)}
             {renderField("City", userData.city, <Building2 className="w-4 h-4" />)}
             {renderField("Province/State", userData.state, <Building2 className="w-4 h-4" />)}
-            {renderField("Postal Code", userData.zipcode, <Hash className="w-4 h-4" />)}
-            {renderField("Country", "Philippines", <Globe className="w-4 h-4" />)} {/* Country is hardcoded */}
           </div>
         </div>
 

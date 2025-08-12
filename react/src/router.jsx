@@ -11,6 +11,7 @@ import User from './user/user';
 import ConsultationHistory from './user/history';
 import AppointmentBooking from './user/appointmentBooking';
 import StudentProfile from './user/profile';
+import ViewAppointments from './user/viewAppointments';
 
 // Admin Pages & Layout
 import { AdminDashboard } from './admin/AdminDashboard';
@@ -21,6 +22,7 @@ import InventorySystem from './admin/InventorySystem';
 import ManageMedicalRecords from './admin/MedicalRecords/ManageMedicalRecords';
 import UserDetail from './admin/MedicalRecords/UserDetail';
 import Navbar from './medicalStaff/Navbar';
+import AppointmentTable from './admin/AppointmentTable';
 
 
 const router = createBrowserRouter([
@@ -53,6 +55,10 @@ const router = createBrowserRouter([
         element: <AppointmentBooking />,
       },
       {
+        path: 'viewAppointments',
+        element: <ViewAppointments />,
+      },
+      {
         path: 'profile',
         element: <StudentProfile />,
       },
@@ -73,6 +79,10 @@ const router = createBrowserRouter([
       {
         path: 'userManagement',
         element: <UserManagement />,
+      },
+      {
+        path: 'appointments',
+        element: <AppointmentTable />,
       },
       {
         path: 'Inventory',

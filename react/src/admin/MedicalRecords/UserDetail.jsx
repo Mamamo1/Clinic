@@ -68,13 +68,12 @@ const UserDetail = () => {
     "first_name",
     "middle_name",
     "last_name",
-    "salutation",
     "gender",
     "date_of_birth",
     "email",
   ]
 
-  const addressFields = ["mobile", "telephone", "zipcode", "state", "city", "street"]
+  const addressFields = ["mobile", "telephone", "state", "city", "street"]
 
   const medicalConditions = [
     { key: "anemia", label: "Anemia" },
@@ -906,7 +905,7 @@ const UserDetail = () => {
             </div>
             <div className="flex-1">
               <h2 className="text-2xl font-bold text-blue-800">
-                {userData.salutation} {userData.first_name} {userData.middle_name} {userData.last_name}
+              {userData.first_name} {userData.middle_name} {userData.last_name}
               </h2>
               <p className="text-gray-700 mt-1">
                 Course: <span className="font-semibold">{userData.course || "N/A"}</span>

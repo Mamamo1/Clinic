@@ -22,11 +22,9 @@ class SignupRequest extends FormRequest
         'dob'            => 'required|date',
         'mobile'         => 'required|string',
         'gender'         => 'required|string',
-        'salutation'     => 'required|string',
         'street'         => 'nullable|string',
         'city'           => 'required|string',
         'state'          => 'required|string',
-        'zipcode'        => 'nullable|string',
         'telephone'      => 'nullable|string',
     ];
 }
