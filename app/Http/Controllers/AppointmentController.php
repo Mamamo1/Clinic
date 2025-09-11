@@ -114,6 +114,7 @@ class AppointmentController extends Controller
                 'user_id' => 'required|exists:users,id',
                 'student_id' => 'required|string|max:255',
                 'full_name' => 'required|string|max:255',
+                'course' => 'required|string|max:255',
                 'service_type' => 'required|in:doctor,dentist',
                 'appointment_date' => 'required|date|after_or_equal:today',
                 'appointment_time' => 'required|date_format:H:i',
@@ -180,6 +181,7 @@ class AppointmentController extends Controller
                 'user_id' => $request->user_id,
                 'student_id' => $request->student_id,
                 'full_name' => $request->full_name,
+                'course' => $request->course,
                 'service_type' => $request->service_type,
                 'appointment_date' => $request->appointment_date,
                 'appointment_time' => $request->appointment_time,
@@ -227,15 +229,6 @@ class AppointmentController extends Controller
                 ], 422);
             }
 
-            // Check if appointment is at least 24 hours away
-            $appointmentDateTime = Carbon::parse($appointment->appointment_date . ' ' . $appointment->appointment_time);
-            if ($appointmentDateTime->diffInHours(Carbon::now()) < 24) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Appointments can only be cancelled at least 24 hours in advance'
-                ], 422);
-            }
-
             $appointment->update(['status' => 'cancelled']);
 
             return response()->json([
@@ -274,6 +267,7 @@ class AppointmentController extends Controller
                 $query->where(function ($q) use ($search) {
                     $q->where('full_name', 'like', "%{$search}%")
                       ->orWhere('student_id', 'like', "%{$search}%")
+                      ->orWhere('course', 'like', "%{$search}%")
                       ->orWhere('reason', 'like', "%{$search}%");
                 });
             }
@@ -281,12 +275,19 @@ class AppointmentController extends Controller
             // Sorting
             $sortBy = $request->get('sort_by', 'appointment_date');
             $sortOrder = $request->get('sort_order', 'desc');
-            
+
             if ($sortBy === 'date') {
                 $query->orderBy('appointment_date', $sortOrder)
                       ->orderBy('appointment_time', $sortOrder);
             } else {
-                $query->orderBy($sortBy, $sortOrder);
+                // Prevent SQL injection by validating the column name
+                $allowedSorts = ['appointment_date', 'appointment_time', 'full_name', 'student_id', 'course', 'service_type', 'status'];
+                if (in_array($sortBy, $allowedSorts)) {
+                    $query->orderBy($sortBy, $sortOrder);
+                } else {
+                    // fallback to default sort if invalid column provided
+                    $query->orderBy('appointment_date', 'desc');
+                }
             }
 
             $appointments = $query->get();

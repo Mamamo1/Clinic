@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import {
   Clock,
@@ -27,12 +25,12 @@ const AppointmentScheduleManager = () => {
     appointments_enabled: true,
     doctor_enabled: true,
     dentist_enabled: true,
+    employee_enabled: true,
     enabled_courses: [],
     enabled_departments: [],
     custom_message: "Appointments are currently unavailable for your course/department.",
   })
 
-  // Course and Department data
   const shsCourses = [
     { value: "ABM", text: "ABM - Accountancy, Business and Management" },
     { value: "STEM", text: "STEM - Science, Technology, Engineering and Mathematics" },
@@ -59,7 +57,6 @@ const AppointmentScheduleManager = () => {
     ],
   }
 
-  // Fetch current schedule settings
   const fetchScheduleSettings = async () => {
     setLoading(true)
     setError("")
@@ -73,7 +70,13 @@ const AppointmentScheduleManager = () => {
       })
 
       if (response.data.success) {
-        setScheduleSettings(response.data.data)
+        const data = response.data.data
+        setScheduleSettings({
+          ...data,
+          enabled_courses: Array.isArray(data.enabled_courses) ? data.enabled_courses : [],
+          enabled_departments: Array.isArray(data.enabled_departments) ? data.enabled_departments : [],
+          employee_enabled: data.employee_enabled ?? true,
+        })
       }
     } catch (error) {
       console.error("Error fetching schedule settings:", error)
@@ -83,14 +86,27 @@ const AppointmentScheduleManager = () => {
     }
   }
 
-  // Save schedule settings
   const saveScheduleSettings = async () => {
     setSaving(true)
     setError("")
     setSuccessMessage("")
+
     try {
       const token = localStorage.getItem("auth_token")
-      const response = await axios.post("http://localhost:8000/api/appointment-schedule", scheduleSettings, {
+      const payload = {
+        appointments_enabled: Boolean(scheduleSettings.appointments_enabled),
+        doctor_enabled: Boolean(scheduleSettings.doctor_enabled),
+        dentist_enabled: Boolean(scheduleSettings.dentist_enabled),
+        employee_enabled: Boolean(scheduleSettings.employee_enabled),
+        enabled_courses: Array.isArray(scheduleSettings.enabled_courses)
+          ? scheduleSettings.enabled_courses.filter((course) => course && typeof course === "string")
+          : [],
+        enabled_departments: Array.isArray(scheduleSettings.enabled_departments)
+          ? scheduleSettings.enabled_departments.filter((dept) => dept && typeof dept === "string")
+          : [],
+        custom_message: String(scheduleSettings.custom_message || ""),
+      }
+      const response = await axios.post("http://localhost:8000/api/appointment-schedule", payload, {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/json",
@@ -104,7 +120,12 @@ const AppointmentScheduleManager = () => {
       }
     } catch (error) {
       console.error("Error saving schedule settings:", error)
-      setError(error.response?.data?.message || "Failed to save schedule settings")
+      if (error.response?.data?.errors) {
+        const errorMessages = Object.values(error.response.data.errors).flat()
+        setError(`Validation errors: ${errorMessages.join(", ")}`)
+      } else {
+        setError(error.response?.data?.message || "Failed to save schedule settings")
+      }
     } finally {
       setSaving(false)
     }
@@ -122,28 +143,36 @@ const AppointmentScheduleManager = () => {
   }
 
   const handleCourseToggle = (courseValue) => {
-    setScheduleSettings((prev) => ({
-      ...prev,
-      enabled_courses: prev.enabled_courses.includes(courseValue)
-        ? prev.enabled_courses.filter((c) => c !== courseValue)
-        : [...prev.enabled_courses, courseValue],
-    }))
+    setScheduleSettings((prev) => {
+      const currentCourses = Array.isArray(prev.enabled_courses) ? prev.enabled_courses : []
+      return {
+        ...prev,
+        enabled_courses: currentCourses.includes(courseValue)
+          ? currentCourses.filter((c) => c !== courseValue)
+          : [...currentCourses, courseValue],
+      }
+    })
   }
 
   const handleDepartmentToggle = (departmentValue) => {
-    setScheduleSettings((prev) => ({
-      ...prev,
-      enabled_departments: prev.enabled_departments.includes(departmentValue)
-        ? prev.enabled_departments.filter((d) => d !== departmentValue)
-        : [...prev.enabled_departments, departmentValue],
-    }))
+    setScheduleSettings((prev) => {
+      const currentDepartments = Array.isArray(prev.enabled_departments) ? prev.enabled_departments : []
+      return {
+        ...prev,
+        enabled_departments: currentDepartments.includes(departmentValue)
+          ? currentDepartments.filter((d) => d !== departmentValue)
+          : [...currentDepartments, departmentValue],
+      }
+    })
   }
 
   const handleSelectAllCourses = () => {
     const allCourses = shsCourses.map((c) => c.value)
+    const currentCourses = Array.isArray(scheduleSettings.enabled_courses) ? scheduleSettings.enabled_courses : []
+
     setScheduleSettings((prev) => ({
       ...prev,
-      enabled_courses: prev.enabled_courses.length === allCourses.length ? [] : allCourses,
+      enabled_courses: currentCourses.length === allCourses.length ? [] : allCourses,
     }))
   }
 
@@ -151,25 +180,31 @@ const AppointmentScheduleManager = () => {
     const allDepartments = Object.values(collegeDepartments)
       .flat()
       .map((d) => d.value)
+    const currentDepartments = Array.isArray(scheduleSettings.enabled_departments)
+      ? scheduleSettings.enabled_departments
+      : []
+
     setScheduleSettings((prev) => ({
       ...prev,
-      enabled_departments: prev.enabled_departments.length === allDepartments.length ? [] : allDepartments,
+      enabled_departments: currentDepartments.length === allDepartments.length ? [] : allDepartments,
     }))
   }
 
   const getStatistics = () => {
     const totalCourses = shsCourses.length
     const totalDepartments = Object.values(collegeDepartments).flat().length
-    const enabledCourses = scheduleSettings.enabled_courses.length
-    const enabledDepartments = scheduleSettings.enabled_departments.length
+    const enabledCourses = Array.isArray(scheduleSettings.enabled_courses) ? scheduleSettings.enabled_courses.length : 0
+    const enabledDepartments = Array.isArray(scheduleSettings.enabled_departments)
+      ? scheduleSettings.enabled_departments.length
+      : 0
 
     return {
       totalCourses,
       totalDepartments,
       enabledCourses,
       enabledDepartments,
-      coursesPercentage: Math.round((enabledCourses / totalCourses) * 100),
-      departmentsPercentage: Math.round((enabledDepartments / totalDepartments) * 100),
+      coursesPercentage: totalCourses > 0 ? Math.round((enabledCourses / totalCourses) * 100) : 0,
+      departmentsPercentage: totalDepartments > 0 ? Math.round((enabledDepartments / totalDepartments) * 100) : 0,
     }
   }
 
@@ -248,7 +283,7 @@ const AppointmentScheduleManager = () => {
         )}
 
         {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -288,6 +323,22 @@ const AppointmentScheduleManager = () => {
               <Building className="w-8 h-8 text-green-600" />
             </div>
           </div>
+          <div className="bg-orange-50 border border-orange-200 rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-orange-600 text-sm font-medium">Employees</p>
+                <p className="text-2xl font-bold text-orange-800">
+                  {scheduleSettings.employee_enabled ? "ENABLED" : "DISABLED"}
+                </p>
+                <p className="text-xs text-orange-600">Staff appointments</p>
+              </div>
+              {scheduleSettings.employee_enabled ? (
+                <CheckCircle className="w-8 h-8 text-green-600" />
+              ) : (
+                <XCircle className="w-8 h-8 text-red-600" />
+              )}
+            </div>
+          </div>
           <div className="bg-purple-50 border border-purple-200 rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -316,7 +367,7 @@ const AppointmentScheduleManager = () => {
             <Settings className="mr-2" />
             Global Settings
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="flex items-center justify-between p-4 bg-white rounded-lg border">
               <div>
                 <h4 className="font-semibold text-gray-800">Appointments System</h4>
@@ -377,6 +428,27 @@ const AppointmentScheduleManager = () => {
                 />
               </button>
             </div>
+            <div className="flex items-center justify-between p-4 bg-white rounded-lg border">
+              <div>
+                <h4 className="font-semibold text-gray-800 flex items-center">
+                  <Building className="w-4 h-4 mr-1" />
+                  Employee Access
+                </h4>
+                <p className="text-sm text-gray-600">Staff appointments</p>
+              </div>
+              <button
+                onClick={() => handleToggle("employee_enabled")}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  scheduleSettings.employee_enabled ? "bg-orange-600" : "bg-gray-300"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    scheduleSettings.employee_enabled ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -393,7 +465,10 @@ const AppointmentScheduleManager = () => {
                 onClick={handleSelectAllCourses}
                 className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-sm font-medium transition-colors"
               >
-                {scheduleSettings.enabled_courses.length === shsCourses.length ? "Clear All" : "Select All"}
+                {(Array.isArray(scheduleSettings.enabled_courses) ? scheduleSettings.enabled_courses.length : 0) ===
+                shsCourses.length
+                  ? "Clear All"
+                  : "Select All"}
               </button>
             </div>
             <div className="space-y-3">
@@ -402,7 +477,10 @@ const AppointmentScheduleManager = () => {
                   <input
                     type="checkbox"
                     id={`course-${course.value}`}
-                    checked={scheduleSettings.enabled_courses.includes(course.value)}
+                    checked={
+                      Array.isArray(scheduleSettings.enabled_courses) &&
+                      scheduleSettings.enabled_courses.includes(course.value)
+                    }
                     onChange={() => handleCourseToggle(course.value)}
                     className="h-4 w-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
                   />
@@ -428,7 +506,9 @@ const AppointmentScheduleManager = () => {
                 onClick={handleSelectAllDepartments}
                 className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium transition-colors"
               >
-                {scheduleSettings.enabled_departments.length === Object.values(collegeDepartments).flat().length
+                {(Array.isArray(scheduleSettings.enabled_departments)
+                  ? scheduleSettings.enabled_departments.length
+                  : 0) === Object.values(collegeDepartments).flat().length
                   ? "Clear All"
                   : "Select All"}
               </button>
@@ -443,7 +523,10 @@ const AppointmentScheduleManager = () => {
                         <input
                           type="checkbox"
                           id={`dept-${course.value}`}
-                          checked={scheduleSettings.enabled_departments.includes(course.value)}
+                          checked={
+                            Array.isArray(scheduleSettings.enabled_departments) &&
+                            scheduleSettings.enabled_departments.includes(course.value)
+                          }
                           onChange={() => handleDepartmentToggle(course.value)}
                           className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                         />
@@ -466,7 +549,7 @@ const AppointmentScheduleManager = () => {
             Custom Unavailability Message
           </h3>
           <textarea
-            value={scheduleSettings.custom_message}
+            value={scheduleSettings.custom_message || ""}
             onChange={(e) => setScheduleSettings((prev) => ({ ...prev, custom_message: e.target.value }))}
             className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             rows={3}

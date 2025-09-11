@@ -1,8 +1,17 @@
-"use client"
-
 import { useState, useEffect } from "react"
-import { Calendar, Clock, Stethoscope, AlertCircle, CheckCircle, User, XCircle, RefreshCw } from "lucide-react"
+import {
+  Calendar,
+  Clock,
+  Stethoscope,
+  AlertCircle,
+  CheckCircle,
+  User,
+  XCircle,
+  RefreshCw,
+  ArrowLeft,
+} from "lucide-react"
 import axios from "axios"
+import { useNavigate } from "react-router-dom"
 
 const AppointmentBooking = () => {
   const [appointmentType, setAppointmentType] = useState("doctor")
@@ -17,23 +26,27 @@ const AppointmentBooking = () => {
   const [userInfo, setUserInfo] = useState(null)
   const [appointmentAvailability, setAppointmentAvailability] = useState(null)
   const [checkingAvailability, setCheckingAvailability] = useState(true)
-
-  // Get minimum date (today)
+  const navigate = useNavigate()
   const today = new Date().toISOString().split("T")[0]
 
-  // Fetch user info and check availability on component mount
+  const getApiAccountType = (userAccountType) => {
+    if (userAccountType === "shs" || userAccountType === "College") {
+      return "Student"
+    }
+    if (userAccountType === "Employee") {
+      return "Employee"
+    }
+    return "Student"
+  }
+
   useEffect(() => {
     fetchUserInfo()
   }, [])
-
-  // Check availability when appointment type changes
   useEffect(() => {
     if (appointmentType && userInfo) {
       checkAppointmentAvailability()
     }
   }, [appointmentType, userInfo])
-
-  // Fetch available time slots when appointment type and date are selected
   useEffect(() => {
     if (appointmentType && selectedDate && appointmentAvailability?.available) {
       fetchAvailableTimeSlots()
@@ -68,12 +81,21 @@ const AppointmentBooking = () => {
 
     try {
       const token = localStorage.getItem("auth_token")
+
+      const apiAccountType = getApiAccountType(userInfo.account_type)
+
+      const requestData = {
+        account_type: apiAccountType,
+        service_type: appointmentType,
+      }
+
+      if (apiAccountType === "Student" && userInfo.course) {
+        requestData.course = userInfo.course
+      }
+
       const response = await axios.post(
         "http://localhost:8000/api/appointment-schedule/check-availability",
-        {
-          course: userInfo.course || userInfo.account_type || "",
-          service_type: appointmentType,
-        },
+        requestData,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -125,7 +147,7 @@ const AppointmentBooking = () => {
 
       if (response.data.success) {
         setAvailableTimeSlots(response.data.data.available_slots || [])
-        setSelectedTime("") // Reset selected time when slots change
+        setSelectedTime("")
       }
     } catch (err) {
       console.error("Error fetching time slots:", err)
@@ -140,7 +162,6 @@ const AppointmentBooking = () => {
     e.preventDefault()
     setLoading(true)
     setError("")
-    setSuccess("")
 
     try {
       const token = localStorage.getItem("auth_token")
@@ -150,13 +171,20 @@ const AppointmentBooking = () => {
         return
       }
 
-      // Double-check availability before submitting
+      const apiAccountType = getApiAccountType(userInfo.account_type)
+
+      const availabilityData = {
+        account_type: apiAccountType,
+        service_type: appointmentType,
+      }
+
+      if (apiAccountType === "Student" && userInfo.course) {
+        availabilityData.course = userInfo.course
+      }
+
       const availabilityCheck = await axios.post(
         "http://localhost:8000/api/appointment-schedule/check-availability",
-        {
-          course: userInfo.course || userInfo.account_type || "",
-          service_type: appointmentType,
-        },
+        availabilityData,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -179,6 +207,17 @@ const AppointmentBooking = () => {
         appointment_date: selectedDate,
         appointment_time: selectedTime,
         reason: reason,
+        ...(userInfo.account_type === "Employee"
+          ? {
+              account_type: "Employee",
+              course: "EMPLOYEE",
+              department: null,
+            }
+          : {
+              course: userInfo.course,
+              department: userInfo.department,
+              account_type: userInfo.account_type,
+            }),
       }
 
       const response = await axios.post("http://localhost:8000/api/appointments", appointmentData, {
@@ -191,22 +230,16 @@ const AppointmentBooking = () => {
 
       if (response.data.success) {
         setSuccess("Appointment booked successfully! You will receive a confirmation shortly.")
-        // Reset form
         setSelectedDate("")
         setSelectedTime("")
         setReason("")
         setAvailableTimeSlots([])
-
-        // Scroll to success message
         window.scrollTo({ top: 0, behavior: "smooth" })
       }
     } catch (err) {
       console.error("Error booking appointment:", err)
-      if (err.response?.data?.message) {
-        setError(err.response.data.message)
-      } else if (err.response?.data?.errors) {
-        const errors = Object.values(err.response.data.errors).flat()
-        setError(errors.join(", "))
+      if (err.response?.status === 422) {
+        setError(`Validation failed: ${JSON.stringify(err.response.data.errors || err.response.data.message)}`)
       } else {
         setError("Failed to book appointment. Please try again.")
       }
@@ -223,20 +256,35 @@ const AppointmentBooking = () => {
     return `${displayHour}:${minutes} ${ampm}`
   }
 
-  // Show loading state while checking availability
   if (checkingAvailability) {
     return (
-      <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border-t-4 border-blue-700">
-          <div className="bg-gradient-to-r from-blue-800 to-blue-900 text-white p-6">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-yellow-50 p-4 sm:p-6 lg:p-8">
+        {/* Back Button - Enhanced and Bigger */}
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center text-blue-700 hover:text-blue-900 transition-colors duration-200 mb-6 px-6 py-4 rounded-xl bg-blue-100 hover:bg-blue-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+        >
+          <ArrowLeft className="w-6 h-6 mr-3" />
+          <span className="text-xl font-bold">Back to Dashboard</span>
+        </button>
+
+        {/* Main Container - Updated */}
+        <div className="max-w-6xl mx-auto bg-white shadow-2xl rounded-2xl overflow-hidden border-2 border-yellow-200">
+          {/* Golden Accent Bar */}
+          <div className="h-4 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-400"></div>
+
+          {/* Header - Updated */}
+          <div className="p-6 sm:p-10 bg-gradient-to-r from-blue-800 to-blue-900 text-white">
             <div className="flex items-center justify-center mb-4">
-              <div className="w-12 h-12 bg-yellow-400 rounded-lg flex items-center justify-center shadow-lg">
-                <Calendar className="w-7 h-7 text-blue-800" />
+              <div className="w-16 h-16 bg-yellow-400 rounded-xl flex items-center justify-center shadow-lg border-4 border-white">
+                <Calendar className="w-8 h-8 text-blue-800" />
               </div>
             </div>
-            <h1 className="text-3xl font-bold text-center text-yellow-400">Book an Appointment</h1>
-            <p className="text-center text-blue-200 mt-2">National University Clinic School</p>
+            <h1 className="text-4xl font-bold text-center mb-2">Book an Appointment</h1>
+            <p className="text-center text-blue-200 text-lg">National University - Lipa Campus Medical Center</p>
           </div>
+
+          {/* Loading Content */}
           <div className="flex flex-col items-center justify-center h-64 text-blue-700">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700 mb-4"></div>
             <p className="text-lg">Checking appointment availability...</p>
@@ -247,20 +295,35 @@ const AppointmentBooking = () => {
     )
   }
 
-  // Show unavailable message if appointments are not available
   if (appointmentAvailability && !appointmentAvailability.available) {
     return (
-      <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border-t-4 border-red-500">
-          <div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-6">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-yellow-50 p-4 sm:p-6 lg:p-8">
+        {/* Back Button - Enhanced and Bigger */}
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center text-blue-700 hover:text-blue-900 transition-colors duration-200 mb-6 px-6 py-4 rounded-xl bg-blue-100 hover:bg-blue-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+        >
+          <ArrowLeft className="w-6 h-6 mr-3" />
+          <span className="text-xl font-bold">Back to Dashboard</span>
+        </button>
+
+        {/* Main Container - Updated */}
+        <div className="max-w-6xl mx-auto bg-white shadow-2xl rounded-2xl overflow-hidden border-2 border-yellow-200">
+          {/* Golden Accent Bar */}
+          <div className="h-4 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-400"></div>
+
+          {/* Header - Updated */}
+          <div className="p-6 sm:p-10 bg-gradient-to-r from-blue-800 to-blue-900 text-white">
             <div className="flex items-center justify-center mb-4">
-              <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-lg">
-                <XCircle className="w-7 h-7 text-red-600" />
+              <div className="w-16 h-16 bg-yellow-400 rounded-xl flex items-center justify-center shadow-lg border-4 border-white">
+                <Calendar className="w-8 h-8 text-blue-800" />
               </div>
             </div>
-            <h1 className="text-3xl font-bold text-center">Appointments Unavailable</h1>
-            <p className="text-center text-red-200 mt-2">National University Clinic School</p>
+            <h1 className="text-4xl font-bold text-center mb-2">Book an Appointment</h1>
+            <p className="text-center text-blue-200 text-lg">National University - Lipa Campus Medical Center</p>
           </div>
+
+          {/* Unavailable Content */}
           <div className="p-8 text-center">
             <div className="mb-6">
               <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
@@ -319,30 +382,31 @@ const AppointmentBooking = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden border-t-4 border-blue-700">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-800 to-blue-900 text-white p-6">
-          <div className="flex items-center justify-center mb-4">
-            <div className="w-12 h-12 bg-yellow-400 rounded-lg flex items-center justify-center shadow-lg">
-              <Calendar className="w-7 h-7 text-blue-800" />
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold text-center text-yellow-400">Book an Appointment</h1>
-          <p className="text-center text-blue-200 mt-2">National University Clinic School</p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-yellow-50 p-4 sm:p-6 lg:p-8">
+      {/* Back Button - Enhanced and Bigger */}
+      <button
+        onClick={() => navigate(-1)}
+        className="flex items-center text-blue-700 hover:text-blue-900 transition-colors duration-200 mb-6 px-6 py-4 rounded-xl bg-blue-100 hover:bg-blue-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+      >
+        <ArrowLeft className="w-6 h-6 mr-3" />
+        <span className="text-xl font-bold">Back to Dashboard</span>
+      </button>
 
-        {/* Availability Status */}
-        {appointmentAvailability?.available && (
-          <div className="bg-green-50 border-b border-green-200 p-4">
-            <div className="flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
-              <p className="text-green-700 font-medium">
-                {appointmentType === "doctor" ? "Doctor" : "Dentist"} appointments are available for your course
-              </p>
+      {/* Main Container - Updated */}
+      <div className="max-w-6xl mx-auto bg-white shadow-2xl rounded-2xl overflow-hidden border-2 border-yellow-200">
+        {/* Golden Accent Bar */}
+        <div className="h-4 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-400"></div>
+
+        {/* Header - Updated */}
+        <div className="p-6 sm:p-10 bg-gradient-to-r from-blue-800 to-blue-900 text-white">
+          <div className="flex items-center justify-center mb-4">
+            <div className="w-16 h-16 bg-yellow-400 rounded-xl flex items-center justify-center shadow-lg border-4 border-white">
+              <Calendar className="w-8 h-8 text-blue-800" />
             </div>
           </div>
-        )}
+          <h1 className="text-4xl font-bold text-center mb-2">Book an Appointment</h1>
+          <p className="text-center text-blue-200 text-lg">National University - Lipa Campus Medical Center</p>
+        </div>
 
         {/* User Info */}
         {userInfo && (

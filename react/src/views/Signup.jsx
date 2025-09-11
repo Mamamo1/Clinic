@@ -1,12 +1,10 @@
-"use client"
-
 import React from "react"
-
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { NavLink, useNavigate } from "react-router-dom"
 import { FaUserPlus, FaCheck, FaExclamationCircle, FaStethoscope, FaGraduationCap } from "react-icons/fa"
 import axios from "axios"
 import Swal from "sweetalert2"
+import CryptoJS from "crypto-js"
 
 const LoadingScreen = () => (
   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -17,7 +15,31 @@ const LoadingScreen = () => (
   </div>
 )
 
-// Memoized InputField component to prevent unnecessary re-renders
+const secretKey = import.meta.env.VITE_AES_SECRET_KEY
+
+const encryptData = (text) => {
+  if (!text) return null
+
+  try {
+    const keyHash = CryptoJS.SHA256(secretKey)
+    const key = CryptoJS.lib.WordArray.create(keyHash.words.slice(0, 4))
+
+    const iv = CryptoJS.lib.WordArray.random(16)
+
+    const encrypted = CryptoJS.AES.encrypt(text, key, {
+      iv: iv,
+      mode: CryptoJS.mode.CBC,
+      padding: CryptoJS.pad.Pkcs7,
+    })
+
+
+    return CryptoJS.enc.Base64.stringify(iv.concat(encrypted.ciphertext))
+  } catch (error) {
+    console.error("Encryption failed:", error)
+    return null
+  }
+}
+
 const InputField = React.memo(
   ({
     label,
@@ -126,7 +148,6 @@ export default function NUSignupForm() {
     dob: "",
     mobile: "",
     gender: "",
-    nationality: "Filipino",
     street: "",
     city: "",
     state: "",
@@ -140,7 +161,6 @@ export default function NUSignupForm() {
   const [validationErrors, setValidationErrors] = useState({})
   const [touchedFields, setTouchedFields] = useState({})
 
-  // Memoized course data to prevent recreation on every render
   const courseData = useMemo(
     () => ({
       shsCourses: [
@@ -170,16 +190,12 @@ export default function NUSignupForm() {
     }),
     [],
   )
-
-  // Check authentication on mount
   useEffect(() => {
     const userToken = localStorage.getItem("auth_token")
     if (userToken) {
       navigate("/user")
     }
   }, [navigate])
-
-  // Enhanced validation with better error messages
   const validateField = useCallback(
     (name, value) => {
       const errors = {}
@@ -191,7 +207,6 @@ export default function NUSignupForm() {
           } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
             errors.email = "Please enter a valid email address"
           } else if (!value.toLowerCase().includes("nu-lipa.edu.ph") && !value.toLowerCase().includes("gmail.com")) {
-            // Allow both NU email and Gmail for flexibility
             errors.email = "Please use your NU email or a valid Gmail address"
           }
           break
@@ -279,7 +294,6 @@ export default function NUSignupForm() {
     [formData.password, courseType],
   )
 
-  // Optimized change handler with debouncing for validation
   const handleChange = useCallback(
     (e) => {
       const { name, value } = e.target
@@ -288,14 +302,11 @@ export default function NUSignupForm() {
       const numberOnlyFields = ["student_number", "employee_id", "mobile", "telephone"]
       const capitalizeFields = ["firstName", "middleName", "lastName", "street", "city", "state"]
 
-      // Input sanitization
       if (nameFields.includes(name)) {
         newValue = newValue.replace(/[0-9]/g, "")
       }
-
       if (numberOnlyFields.includes(name)) {
         if (name === "student_number") {
-          // Format student number as YYYY-XXXXXX
           newValue = newValue.replace(/[^0-9-]/g, "")
           if (newValue.length === 4 && !newValue.includes("-")) {
             newValue += "-"
@@ -309,17 +320,11 @@ export default function NUSignupForm() {
       if (capitalizeFields.includes(name)) {
         newValue = newValue.replace(/\b\w/g, (char) => char.toUpperCase())
       }
-
-      // Update form data
       setFormData((prevData) => ({
         ...prevData,
         [name]: newValue,
       }))
-
-      // Mark field as touched
       setTouchedFields((prev) => ({ ...prev, [name]: true }))
-
-      // Debounced validation
       setTimeout(() => {
         const fieldErrors = validateField(name, newValue)
         setValidationErrors((prev) => ({
@@ -346,8 +351,6 @@ export default function NUSignupForm() {
       student_number: selected !== "Employee" ? prev.student_number : "",
       employee_id: selected === "Employee" ? prev.employee_id : "",
     }))
-
-    // Clear validation errors for fields that are no longer relevant
     setValidationErrors((prev) => ({
       ...prev,
       student_number: undefined,
@@ -401,7 +404,6 @@ export default function NUSignupForm() {
       setCurrentStep((prev) => Math.min(prev + 1, 3))
     } else {
       setValidationErrors(errors)
-      // Mark all fields in current step as touched
       Object.keys(errors).forEach((field) => {
         setTouchedFields((prev) => ({ ...prev, [field]: true }))
       })
@@ -412,7 +414,6 @@ export default function NUSignupForm() {
     setCurrentStep((prev) => Math.max(prev - 1, 1))
   }, [])
 
-  // Enhanced submit handler with better error handling
   const handleSubmit = async (e) => {
     e.preventDefault()
 
@@ -439,8 +440,6 @@ export default function NUSignupForm() {
     }
 
     setLoading(true)
-
-    // Build payload conditionally
     const payload = {
       first_name: formData.firstName?.trim(),
       middle_name: formData.middleName?.trim() || null,
@@ -449,17 +448,17 @@ export default function NUSignupForm() {
       password: formData.password,
       password_confirmation: formData.password_confirmation,
       dob: formData.dob,
-      mobile: formData.mobile?.trim(),
       gender: formData.gender,
-      nationality: formData.nationality,
-      street: formData.street?.trim(),
-      city: formData.city?.trim(),
-      state: formData.state?.trim(),
-      telephone: formData.telephone?.trim() || null,
       account_type: formData.account_type,
+
+      // Encrypted fields
+      mobile: encryptData(formData.mobile?.trim()),
+      telephone: encryptData(formData.telephone?.trim() || ""), // as emergency contact
+      street: encryptData(formData.street?.trim()),
+      city: encryptData(formData.city?.trim()),
+      state: encryptData(formData.state?.trim()),
     }
 
-    // Conditionally add fields based on account type
     if (formData.student_number?.trim()) {
       payload.student_number = formData.student_number.trim()
     }
@@ -478,7 +477,7 @@ export default function NUSignupForm() {
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-        timeout: 10000, // 10 second timeout
+        timeout: 10000,
       })
 
       if (response.data?.success === true) {
@@ -509,7 +508,6 @@ export default function NUSignupForm() {
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message
       } else if (error.response?.data?.errors) {
-        // Handle Laravel validation errors
         const errors = error.response.data.errors
         errorMessage = Object.values(errors).flat().join(", ")
       } else if (error.code === "ECONNABORTED") {
@@ -527,7 +525,6 @@ export default function NUSignupForm() {
     }
   }
 
-  // Memoized course rendering function
   const renderCourses = useMemo(() => {
     if (courseType === "SHS") {
       return courseData.shsCourses.map((c) => (
@@ -550,7 +547,6 @@ export default function NUSignupForm() {
     }
   }, [courseType, courseData])
 
-  // Memoized progress bar component
   const ProgressBar = useMemo(() => {
     const progress = (currentStep / 3) * 100
 
@@ -620,7 +616,7 @@ export default function NUSignupForm() {
           </h2>
           <p className="text-blue-700 font-medium text-lg">Join the NU Lipa Community</p>
           <div className="mt-3 flex justify-center">
-            <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-blue-900 px-6 py-2 rounded-full text-sm font-bold shadow-md">
+            <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-blue-900 px-6 py-2 rounded-full text-sm font-bold shadow-md hover:shadow-lg border-2">
               Excellence • Innovation • Service
             </div>
           </div>
@@ -706,12 +702,7 @@ export default function NUSignupForm() {
                     hasError={touchedFields.account_type && validationErrors.account_type}
                     isValid={touchedFields.account_type && !validationErrors.account_type && courseType}
                     errorMessage={validationErrors.account_type}
-                    options={[
-                      { value: "", text: "Select Your Account Type" },
-                      { value: "SHS", text: "Senior High School Student" },
-                      { value: "College", text: "College Student" },
-                      { value: "Employee", text: "Faculty/Staff Member" },
-                    ]}
+                    options={[{ value: "", text: "Select Your Account Type" }, "SHS", "College", "Employee"]}
                   />
 
                   <InputField
@@ -1007,8 +998,6 @@ export default function NUSignupForm() {
             </form>
           </div>
         </div>
-
-        {/* Footer */}
         <div className="text-center mt-8 py-6">
           <p className="text-blue-700 text-sm font-bold">
             © 2025 National University - Lipa Campus. All rights reserved.

@@ -1,5 +1,3 @@
-"use client"
-
 import { UserIcon, Bell,  LogOut, ChevronDown, Settings } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { useEffect, useState, useRef } from "react"

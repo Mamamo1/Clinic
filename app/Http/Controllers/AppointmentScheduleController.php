@@ -38,18 +38,23 @@ class AppointmentScheduleController extends Controller
      */
     public function store(Request $request)
     {
+        // Debug: Log the incoming request data
+        \Log::info('Appointment Schedule Request Data:', $request->all());
+
         $validator = Validator::make($request->all(), [
             'appointments_enabled' => 'required|boolean',
             'doctor_enabled' => 'required|boolean',
             'dentist_enabled' => 'required|boolean',
-            'enabled_courses' => 'required|array',
+            'enabled_courses' => 'array',
             'enabled_courses.*' => 'string|in:ABM,STEM,HUMSS',
-            'enabled_departments' => 'required|array',
+            'enabled_departments' => 'array',
             'enabled_departments.*' => 'string|in:BSA,BSBA-FINMGT,BSBA-MKTGMGT,BSTM,BSARCH,BSCE,BSCS,BSIT-MWA,BSMT,BSN,BSPSY',
-            'custom_message' => 'required|string|max:500'
+            'employee_enabled' => 'required|boolean',
+            'custom_message' => 'nullable|string|max:500'
         ]);
 
         if ($validator->fails()) {
+            \Log::error('Validation failed:', $validator->errors()->toArray());
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
@@ -59,12 +64,13 @@ class AppointmentScheduleController extends Controller
 
         try {
             $settings = [
-                'appointments_enabled' => $request->appointments_enabled,
-                'doctor_enabled' => $request->doctor_enabled,
-                'dentist_enabled' => $request->dentist_enabled,
-                'enabled_courses' => $request->enabled_courses,
-                'enabled_departments' => $request->enabled_departments,
-                'custom_message' => $request->custom_message,
+                'appointments_enabled' => (bool) $request->appointments_enabled,
+                'doctor_enabled' => (bool) $request->doctor_enabled,
+                'dentist_enabled' => (bool) $request->dentist_enabled,
+                'employee_enabled' => (bool) $request->employee_enabled,
+                'enabled_courses' => $request->enabled_courses ?? [],
+                'enabled_departments' => $request->enabled_departments ?? [],
+                'custom_message' => $request->custom_message ?? 'Appointments are currently unavailable for your course/department.',
                 'updated_at' => now()->toISOString(),
                 'updated_by' => auth()->user()->id ?? null
             ];
@@ -81,6 +87,7 @@ class AppointmentScheduleController extends Controller
                 'message' => 'Schedule settings updated successfully'
             ]);
         } catch (\Exception $e) {
+            \Log::error('Failed to save schedule settings:', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update schedule settings: ' . $e->getMessage()
@@ -89,12 +96,13 @@ class AppointmentScheduleController extends Controller
     }
 
     /**
-     * Check if appointments are available for a specific course/department
+     * Check if appointments are available for a specific course/department or employee
      */
     public function checkAvailability(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'course' => 'required|string',
+            'course' => 'nullable|string',
+            'account_type' => 'required|string|in:Student,Employee',
             'service_type' => 'required|string|in:doctor,dentist'
         ]);
 
@@ -109,6 +117,7 @@ class AppointmentScheduleController extends Controller
         try {
             $settings = $this->getScheduleSettings();
             $course = $request->course;
+            $accountType = $request->account_type;
             $serviceType = $request->service_type;
 
             // Check if appointments are globally enabled
@@ -130,24 +139,43 @@ class AppointmentScheduleController extends Controller
                 ]);
             }
 
-            // Check if course is in enabled courses (SHS) or enabled departments (College)
-            $shsCourses = ['ABM', 'STEM', 'HUMSS'];
-            $collegeDepartments = ['BSA', 'BSBA-FINMGT', 'BSBA-MKTGMGT', 'BSTM', 'BSARCH', 'BSCE', 'BSCS', 'BSIT-MWA', 'BSMT', 'BSN', 'BSPSY'];
-
-            $isAvailable = false;
-
-            if (in_array($course, $shsCourses)) {
-                // SHS course
-                $isAvailable = in_array($course, $settings['enabled_courses']);
-            } elseif (in_array($course, $collegeDepartments)) {
-                // College department
-                $isAvailable = in_array($course, $settings['enabled_departments']);
+            if ($accountType === 'Employee') {
+                $isAvailable = $settings['employee_enabled'] ?? false;
+                return response()->json([
+                    'success' => true,
+                    'available' => $isAvailable,
+                    'message' => $isAvailable ? 'Appointments are available for employees.' : 'Employee appointments are currently disabled.'
+                ]);
             }
 
+            // Handle Student account type (existing logic)
+            if ($accountType === 'Student' && $course) {
+                // Check if course is in enabled courses (SHS) or enabled departments (College)
+                $shsCourses = ['ABM', 'STEM', 'HUMSS'];
+                $collegeDepartments = ['BSA', 'BSBA-FINMGT', 'BSBA-MKTGMGT', 'BSTM', 'BSARCH', 'BSCE', 'BSCS', 'BSIT-MWA', 'BSMT', 'BSN', 'BSPSY'];
+
+                $isAvailable = false;
+
+                if (in_array($course, $shsCourses)) {
+                    // SHS course - check if any SHS courses are enabled
+                    $isAvailable = in_array($course, $settings['enabled_courses']);
+                } elseif (in_array($course, $collegeDepartments)) {
+                    // College department - check if any college departments are enabled
+                    $isAvailable = in_array($course, $settings['enabled_departments']);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'available' => $isAvailable,
+                    'message' => $isAvailable ? 'Appointments are available for your course.' : $settings['custom_message']
+                ]);
+            }
+
+            // Default case
             return response()->json([
                 'success' => true,
-                'available' => $isAvailable,
-                'message' => $isAvailable ? 'Appointments are available for your course.' : $settings['custom_message']
+                'available' => false,
+                'message' => 'Invalid account type or missing course information.'
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -175,8 +203,9 @@ class AppointmentScheduleController extends Controller
                     'appointments_enabled' => true,
                     'doctor_enabled' => true,
                     'dentist_enabled' => true,
-                    'enabled_courses' => ['ABM', 'STEM', 'HUMSS'], // All SHS courses enabled by default
-                    'enabled_departments' => ['BSA', 'BSBA-FINMGT', 'BSBA-MKTGMGT', 'BSTM', 'BSARCH', 'BSCE', 'BSCS', 'BSIT-MWA', 'BSMT', 'BSN', 'BSPSY'], // All college departments enabled by default
+                    'employee_enabled' => true,
+                    'enabled_courses' => ['ABM', 'STEM', 'HUMSS'],
+                    'enabled_departments' => ['BSA', 'BSBA-FINMGT', 'BSBA-MKTGMGT', 'BSTM', 'BSARCH', 'BSCE', 'BSCS', 'BSIT-MWA', 'BSMT', 'BSN', 'BSPSY'],
                     'custom_message' => 'Appointments are currently unavailable for your course/department. Please contact the clinic for more information.',
                     'created_at' => now()->toISOString()
                 ];
@@ -188,6 +217,11 @@ class AppointmentScheduleController extends Controller
             // Cache the settings
             Cache::put($this->cacheKey, $settings, now()->addHours(24));
         }
+
+        // Ensure arrays are always present (backward compatibility)
+        $settings['enabled_courses'] = $settings['enabled_courses'] ?? [];
+        $settings['enabled_departments'] = $settings['enabled_departments'] ?? [];
+        $settings['employee_enabled'] = $settings['employee_enabled'] ?? true;
 
         return $settings;
     }

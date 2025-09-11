@@ -1,7 +1,4 @@
-"use client"
-
 import { useState, useEffect } from "react"
-import { NavLink } from "react-router-dom"
 import {
   FaFacebookF,
   FaTwitter,
@@ -20,22 +17,21 @@ import {
   FaLaptopMedical,
 } from "react-icons/fa"
 
-// Mock Slideshow component for demo
 const Slideshow = () => {
   const [currentSlide, setCurrentSlide] = useState(0)
   const slides = [
     {
-      image: "/placeholder.svg?height=400&width=600",
+      image: "https://tse4.mm.bing.net/th/id/OIP.6SnSsPUFTdkmUfPDW_8zlQHaEK?cb=ucfimgc2&w=1920&h=1080&rs=1&pid=ImgDetMain&o=7&rm=3",
       title: "Modern Healthcare",
       description: "Advanced medical facilities",
     },
     {
-      image: "/placeholder.svg?height=400&width=600",
+      image: "https://importanceoftechnology.net/wp-content/uploads/2020/10/Importance-of-Technology-in-the-Medical-Field.jpg",
       title: "Student Wellness",
       description: "Comprehensive health services",
     },
     {
-      image: "/placeholder.svg?height=400&width=600",
+      image: "https://medevel.com/content/images/2023/05/AdobeStock_565567523.jpeg",
       title: "Digital Records",
       description: "Secure health management",
     },
@@ -147,16 +143,16 @@ export default function NULandingPage() {
             </div>
 
             <div className="flex items-center space-x-3">
-              <NavLink to="/login">
+              <a href="/login">
                 <button className="px-6 py-2 border-2 border-blue-800 text-blue-800 rounded-lg font-semibold hover:bg-blue-800 hover:text-white transition-all duration-300">
                   Login
                 </button>
-              </NavLink>
-              <NavLink to="/signup">
+              </a>
+              <a href="/signup">
                 <button className="px-6 py-2 bg-blue-800 text-white rounded-lg font-semibold hover:bg-blue-900 transition-all duration-300 shadow-md">
                   Sign Up
                 </button>
-              </NavLink>
+              </a>
             </div>
           </div>
         </div>
@@ -172,9 +168,9 @@ export default function NULandingPage() {
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24">
-          <div className="flex flex-col lg:flex-row items-center justify-between min-h-[80vh]">
+          <div className="flex flex-col lg:flex-row items-center justify-between min-h-[80vh] lg:gap-16">
             {/* Left Content */}
-            <div className="w-full lg:w-1/2 text-center lg:text-left mb-12 lg:mb-0">
+            <div className="w-full lg:w-1/2 text-center lg:text-left mb-12 lg:mb-0 lg:pr-8">
               <div className="mb-6">
                 <div className="inline-flex items-center bg-yellow-400/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
                   <FaStethoscope className="text-yellow-400 mr-2" />
@@ -192,23 +188,23 @@ export default function NULandingPage() {
                 <span className="text-white">Meets Innovation</span>
               </h1>
 
-              <p className="text-xl md:text-2xl mb-8 text-blue-100 max-w-2xl">
+              <p className="text-xl md:text-2xl mb-8 text-blue-100 max-w-2xl lg:max-w-none">
                 Advanced Medical Assessment and Record Keeping System for National University students, faculty, and
                 staff.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8">
-                <NavLink to="/login">
+                <a href="/login">
                   <button className="group px-8 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg text-lg font-semibold hover:from-green-600 hover:to-green-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
                     <FaPlay className="inline mr-2 group-hover:translate-x-1 transition-transform" />
                     Access Portal
                   </button>
-                </NavLink>
-                <NavLink to="/signup">
+                </a>
+                <a href="/signup">
                   <button className="px-8 py-4 border-2 border-yellow-400 text-yellow-400 rounded-lg text-lg font-semibold hover:bg-yellow-400 hover:text-blue-900 transition-all duration-300">
                     Create Account
                   </button>
-                </NavLink>
+                </a>
               </div>
 
               {/* Stats */}
@@ -228,9 +224,11 @@ export default function NULandingPage() {
               </div>
             </div>
 
-            {/* Right Content - Slideshow */}
-            <div className="w-full lg:w-1/2 flex justify-center">
-              <Slideshow />
+            {/* Right Content - Slideshow with proper spacing */}
+            <div className="w-full lg:w-1/2 flex justify-center lg:justify-end lg:pl-8">
+              <div className="w-full max-w-2xl">
+                <Slideshow />
+              </div>
             </div>
           </div>
 

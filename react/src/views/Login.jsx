@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import { NavLink, useNavigate } from "react-router-dom"
 import {
@@ -26,16 +24,11 @@ export default function NULogin() {
   const [passwordError, setPasswordError] = useState("")
   const [generalError, setGeneralError] = useState("")
   const [isFormValid, setIsFormValid] = useState(false)
-
-  // Get the loading context
   const { loading, showLoading, hideLoading } = useLoading()
 
-  // Check form validity
   useEffect(() => {
     setIsFormValid(email.trim() !== "" && password.trim() !== "")
   }, [email, password])
-
-  // Check if user is logged in and redirect based on account type
   useEffect(() => {
     const userToken = localStorage.getItem("auth_token")
     const accountType = localStorage.getItem("account_type")
@@ -65,8 +58,6 @@ export default function NULogin() {
     setEmailError("")
     setPasswordError("")
     setGeneralError("")
-
-    // Validation
     if (!email.trim()) {
       setEmailError("Email is required")
       return
@@ -89,13 +80,9 @@ export default function NULogin() {
 
       if (response.data.success) {
         const accountType = response.data.user.account_type
-
-        // Save token and account type in localStorage
         localStorage.setItem("auth_token", response.data.token)
         localStorage.setItem("account_type", accountType)
         localStorage.setItem("first_name", response.data.user.first_name)
-
-        // Redirect based on account type
         switch (accountType) {
             case "SuperAdmin":
               navigate("/admin")

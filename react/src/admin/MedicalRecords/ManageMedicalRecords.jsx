@@ -2,11 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { FaSpinner } from "react-icons/fa" // Import FaSpinner and FaTimes
-import { capitalizeWords } from "../../utils" // Assuming utils/index.js is in the same directory or adjust path
-
-// UserDetailModal is assumed to be an existing component
-// import UserDetailModal from './UserDetail';
+import { FaSpinner } from "react-icons/fa"
+import { capitalizeWords } from "../../utils"
+import { decryptUserData } from "../../crypto-utils"
 
 const ManageMedicalRecords = () => {
   const navigate = useNavigate()
@@ -16,11 +14,10 @@ const ManageMedicalRecords = () => {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [selectedUser, setSelectedUser] = useState(null) // State for modal
-
+  const [lastVisits, setLastVisits] = useState({}) // ✅ per-user last visit
+  const [currentUser, setCurrentUser] = useState(null)
   const itemsPerPage = 6
 
-  // Define filter groups for consistency with UserManagement
   const filterGroups = {
     All: ["shs", "college", "employee", "doctor", "nurse", "dentist"],
     Staff: ["doctor", "nurse", "dentist"],
@@ -32,7 +29,7 @@ const ManageMedicalRecords = () => {
   const fetchUsers = async () => {
     const token = localStorage.getItem("auth_token")
     if (!token) {
-      navigate("/login") // Redirect to login if no token
+      navigate("/login")
       throw new Error("No auth token found")
     }
     const res = await fetch("http://localhost:8000/api/users", {
@@ -48,31 +45,89 @@ const ManageMedicalRecords = () => {
     return await res.json()
   }
 
+  const fetchCurrentUser = async () => {
+    const token = localStorage.getItem("auth_token")
+    if (!token) {
+      navigate("/login")
+      throw new Error("No auth token found")
+    }
+    const res = await fetch("http://localhost:8000/api/user", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+    })
+    if (!res.ok) {
+      throw new Error("Failed to fetch current user")
+    }
+    return await res.json()
+  }
+
+  // ✅ Fetch last visit per user
+const fetchLastVisit = async (userId, token) => {
+  try {
+    const res = await fetch(`http://localhost:8000/api/medical-records/user/${userId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    if (!res.ok) {
+      console.warn(`Failed to fetch last visit for user ${userId}`, res.status)
+      return null
+    }
+
+    const data = await res.json()
+    return data?.last_visit || null
+  } catch (err) {
+    console.error("Error fetching last visit for user:", userId, err)
+    return null
+  }
+}
+
+
   useEffect(() => {
     const loadUsers = async () => {
       try {
         setLoading(true)
         setError(null)
-        const json = await fetchUsers()
-        const usersList = json.data || []
 
-        // Normalize user data similar to UserManagement
-        const usersData = usersList.map((user) => {
-          const normalizedUser = {
-            ...user,
-            account_type: user.account_type?.toLowerCase() || "",
-            first_name: capitalizeWords(user.first_name),
-            middle_name: capitalizeWords(user.middle_name || ""),
-            last_name: capitalizeWords(user.last_name),
-            course: capitalizeWords(user.course || ""),
-            city: capitalizeWords(user.city || ""),
-            state: capitalizeWords(user.state || ""),
-            street: capitalizeWords(user.street || ""),
+        const token = localStorage.getItem("auth_token")
+        const [currentUserData, usersData] = await Promise.all([
+          fetchCurrentUser(),
+          fetchUsers(),
+        ])
+
+        setCurrentUser(currentUserData)
+        const usersList = usersData.data || []
+
+        const usersDataNormalized = usersList.map((user) => {
+          const decryptedUser = decryptUserData(user)
+          return {
+            ...decryptedUser,
+            account_type: decryptedUser.account_type?.toLowerCase() || "",
+            first_name: capitalizeWords(decryptedUser.first_name),
+            middle_name: capitalizeWords(decryptedUser.middle_name || ""),
+            last_name: capitalizeWords(decryptedUser.last_name),
+            course: capitalizeWords(decryptedUser.course || ""),
+            city: capitalizeWords(decryptedUser.city || ""),
+            state: capitalizeWords(decryptedUser.state || ""),
+            street: capitalizeWords(decryptedUser.street || ""),
           }
-          return normalizedUser
         })
 
-        setUsers(usersData)
+        setUsers(usersDataNormalized)
+
+        // ✅ Fetch last visit for each user
+        usersDataNormalized.forEach((u) => {
+          if (u.id) {
+            fetchLastVisit(u.id, token).then((visitDate) => {
+              setLastVisits((prev) => ({
+                ...prev,
+                [u.id]: visitDate,
+              }))
+            })
+          }
+        })
+
         setLoading(false)
       } catch (err) {
         setError(err.message)
@@ -82,13 +137,22 @@ const ManageMedicalRecords = () => {
     loadUsers()
   }, [navigate])
 
+  const getNavigationPath = (userId) => {
+    if (currentUser?.account_type?.toLowerCase() === "superadmin") {
+      return `/admin/MedicalRecords/UserDetail/${userId}`
+    } else {
+      return `/medicalStaff/MedicalRecords/UserDetail/${userId}`
+    }
+  }
+
   const filtered = users.filter((user) => {
-    // Exclude SuperAdmin
     if (user.account_type === "superadmin") return false
 
     const matchFilter =
       filter === "All" ||
-      (filter === "Staff" ? filterGroups.Staff.includes(user.account_type) : user.account_type === filter.toLowerCase())
+      (filter === "Staff"
+        ? filterGroups.Staff.includes(user.account_type)
+        : user.account_type === filter.toLowerCase())
 
     const fullName = `${user.first_name} ${user.middle_name ?? ""} ${user.last_name}`.toLowerCase()
     const matchSearch =
@@ -185,18 +249,20 @@ const ManageMedicalRecords = () => {
                 <div className="text-sm text-gray-700 mb-1">
                   <span className="font-semibold">Type:</span> {capitalizeWords(user.account_type)}
                 </div>
+                {(user.account_type === "shs" || user.account_type === "college") && (
+                  <div className="text-sm text-gray-700 mb-2">
+                    <span className="font-semibold">Course/Dept:</span>
+                    {user.course || user.program || "N/A"}
+                  </div>
+                )}
                 <div className="text-sm text-gray-700 mb-2">
-                  <span className="font-semibold">Course/Dept:</span> {user.course || user.program || "N/A"}
-                </div>
-                <div className="text-sm text-gray-700 mb-2">
-                  <span className="font-semibold">Last Visit:</span> {user.last_visit || "N/A"}
+                  <span className="font-semibold">Last Visit:</span>{" "}
+                  {lastVisits[user.id] || "N/A"}
                 </div>
                 <button
                   className="text-blue-700 mt-4 font-medium hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 -ml-2"
                   onClick={() => {
-                    // Assuming UserDetailModal is a separate component that takes user data
-                    // For direct navigation, you would use:
-                    navigate(`/admin/MedicalRecords/UserDetail/${user.id}`)
+                    navigate(getNavigationPath(user.id))
                   }}
                 >
                   View Details

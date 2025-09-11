@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useCallback } from "react"
-// Create a context for loading with enhanced functionality
 const LoadingContext = createContext()
 
 export const useLoading = () => {
@@ -13,7 +12,7 @@ export const useLoading = () => {
 export const LoadingProvider = ({ children }) => {
   const [loading, setLoading] = useState(false)
   const [loadingMessage, setLoadingMessage] = useState("Processing...")
-  const [loadingType, setLoadingType] = useState("default") // default, upload, download, auth, etc.
+  const [loadingType, setLoadingType] = useState("default")
 
   const showLoading = useCallback((message = "Processing...", type = "default") => {
     setLoadingMessage(message)
@@ -23,7 +22,6 @@ export const LoadingProvider = ({ children }) => {
 
   const hideLoading = useCallback(() => {
     setLoading(false)
-    // Reset to defaults after a small delay to allow for smooth transitions
     setTimeout(() => {
       setLoadingMessage("Processing...")
       setLoadingType("default")

@@ -7,16 +7,16 @@ use Illuminate\Database\Eloquent\Model;
 class MedicalRecord extends Model
 {
     protected $fillable = [
-        'user_id',
-        'physician_nurse_id',
-        'visit_date',           
-        'reason_for_visit',     
-        'temperature',
-        'blood_pressure',
-        'allergies',
-       
-        
-    ];
+    'user_id',
+    'physician_nurse_id',
+    'visit_date',
+    'visit_time',
+    'reason_for_visit',
+    'illness_name',
+    'temperature',
+    'blood_pressure',
+    'allergies'
+];
     
     public function user() {
         return $this->belongsTo(User::class);

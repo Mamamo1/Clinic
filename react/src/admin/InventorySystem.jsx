@@ -1,12 +1,10 @@
-"use client"
-
 import { useEffect, useState } from "react"
 import AddInventoryModal from "./Modals/AddInventoryModal"
 import EditInventoryModal from "./Modals/EditInventoryModal"
 import DeleteInventoryModal from "./Modals/DeleteInventoryModal"
 import Notification from "./Modals/Notification"
 import axios from "axios"
-import { FaSpinner, FaPlus, FaSearch, FaFilter } from "react-icons/fa" // Import icons
+import { FaSpinner, FaPlus, FaSearch, FaFilter } from "react-icons/fa"
 
 const InventorySystem = () => {
   const [items, setItems] = useState([])

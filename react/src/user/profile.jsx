@@ -1,6 +1,4 @@
-"use client"
-
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState } from "react"
 import axios from "axios"
 import { useNavigate } from "react-router-dom"
 import {
@@ -8,22 +6,20 @@ import {
   User,
   Mail,
   BookOpen,
-  Hash,
   Phone,
   MapPin,
   Calendar,
-  GroupIcon as Gender,
+  Beaker as Gender,
   Briefcase,
   Edit,
   ShieldCheck,
   Home,
   Building2,
-  Globe,
 } from "lucide-react"
-import { useLoading } from "./components/LoadingContext" // Assuming this path is correct
-import LoadingScreen from "./components/LoadingScreen" // Assuming this path is correct
+import { useLoading } from "./components/LoadingContext"
+import LoadingScreen from "./components/LoadingScreen"
+import { decryptUserData } from "../crypto-utils"
 
-// Helper function to capitalize the first letter of each word
 const capitalizeWords = (str) => {
   if (!str || typeof str !== "string") return str
   return str
@@ -57,23 +53,29 @@ export default function UserProfile() {
       })
       .then((response) => {
         const data = response.data
-        // Capitalize specific fields for display
+        const secretKey = import.meta.env.VITE_AES_SECRET_KEY || import.meta.env.REACT_APP_AES_SECRET_KEY
+        let processedData = data
+
+        if (secretKey) {
+          processedData = decryptUserData(data)
+        } else {
+        }
+
         const capitalizedData = {
-          ...data,
-          first_name: capitalizeWords(data.first_name),
-          middle_name: capitalizeWords(data.middle_name),
-          last_name: capitalizeWords(data.last_name),
-          gender: capitalizeWords(data.gender),
-          nationality: capitalizeWords(data.nationality),
-          street: capitalizeWords(data.street),
-          city: capitalizeWords(data.city),
-          state: capitalizeWords(data.state),
+          ...processedData,
+          first_name: capitalizeWords(processedData.first_name),
+          middle_name: capitalizeWords(processedData.middle_name),
+          last_name: capitalizeWords(processedData.last_name),
+          gender: capitalizeWords(processedData.gender),
+          nationality: capitalizeWords(processedData.nationality),
+          street: capitalizeWords(processedData.street),
+          city: capitalizeWords(processedData.city),
+          state: capitalizeWords(processedData.state),
         }
         setUserData(capitalizedData)
       })
       .catch((error) => {
         console.error("Error fetching user data:", error)
-        // Optionally navigate to login or show an error message
         navigate("/login")
       })
       .finally(() => {
@@ -81,11 +83,9 @@ export default function UserProfile() {
       })
   }, [navigate, showLoading, hideLoading])
 
-  const getDisplayValue = useCallback((key, value) => {
-    if (value === null || value === undefined || value === "") {
-      return "N/A"
-    }
-    if (key === "dob") {
+  const getDisplayValue = (label, value) => {
+    if (!value) return "N/A"
+    if (label === "Date of Birth") {
       try {
         return new Date(value).toLocaleDateString("en-US", {
           year: "numeric",
@@ -93,26 +93,24 @@ export default function UserProfile() {
           day: "numeric",
         })
       } catch {
-        return value // Fallback if date parsing fails
+        return value
       }
     }
     return value
-  }, [])
+  }
 
   const renderField = (label, value, icon) => (
     <div className="flex items-center mb-3">
       <div className="p-2 bg-blue-100 rounded-full mr-3 text-blue-700">{icon}</div>
       <div>
         <label className="block text-sm font-medium text-blue-700">{label}</label>
-        <p className="text-blue-900 font-semibold text-base">
-          {getDisplayValue(label.toLowerCase().replace(/\s/g, ""), value)}
-        </p>
+        <p className="text-blue-900 font-semibold text-base">{getDisplayValue(label, value)}</p>
       </div>
     </div>
   )
 
   if (loading) return <LoadingScreen />
-  if (!userData) return null // Or a more sophisticated loading/error state
+  if (!userData) return null
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-yellow-50 p-4 sm:p-6 lg:p-8">
@@ -126,15 +124,12 @@ export default function UserProfile() {
       </button>
 
       <div className="max-w-6xl mx-auto bg-white shadow-2xl rounded-2xl overflow-hidden border-2 border-yellow-200">
-        {/* Golden accent bar */}
         <div className="h-4 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-400"></div>
 
         {/* Profile Header */}
         <div className="p-6 sm:p-10 flex flex-col md:flex-row items-center md:items-start space-y-6 md:space-y-0 md:space-x-8">
           <div className="w-32 h-32 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 shadow-lg border-4 border-yellow-400">
             <User className="w-16 h-16 text-blue-700" />
-            {/* Placeholder for actual profile picture */}
-            {/* <img src="/placeholder.svg?height=128&width=128" alt="User Profile" className="w-full h-full rounded-full object-cover" /> */}
           </div>
           <div className="text-center md:text-left flex-1">
             <h1 className="text-3xl sm:text-4xl font-bold text-blue-900 mb-2">
@@ -164,7 +159,7 @@ export default function UserProfile() {
               </p>
             )}
             <button
-              onClick={() => alert("Edit Profile functionality coming soon!")} 
+              onClick={() => alert("Edit Profile functionality coming soon!")}
               className="mt-6 px-6 py-3 bg-yellow-500 text-blue-900 rounded-lg font-semibold hover:bg-yellow-600 transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center md:inline-flex"
             >
               <Edit className="w-5 h-5 mr-2" />
@@ -172,8 +167,6 @@ export default function UserProfile() {
             </button>
           </div>
         </div>
-
-        {/* Personal Info & Contact Info Sections */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 p-6 sm:p-10 border-t border-blue-100">
           {/* Personal Information */}
           <div className="bg-blue-50 p-6 rounded-xl shadow-inner border border-blue-200">
@@ -187,8 +180,6 @@ export default function UserProfile() {
             {renderField("Gender", userData.gender, <Gender className="w-4 h-4" />)}
             {renderField("Date of Birth", userData.dob, <Calendar className="w-4 h-4" />)}
           </div>
-
-          {/* Address And Contacts */}
           <div className="bg-yellow-50 p-6 rounded-xl shadow-inner border border-yellow-200">
             <h2 className="text-2xl font-bold text-blue-900 mb-6 flex items-center">
               <MapPin className="w-6 h-6 mr-3 text-blue-700" />
@@ -201,8 +192,6 @@ export default function UserProfile() {
             {renderField("Province/State", userData.state, <Building2 className="w-4 h-4" />)}
           </div>
         </div>
-
-        {/* Footer */}
         <div className="text-center mt-8 py-6 bg-blue-900 text-white rounded-b-2xl">
           <p className="font-semibold mb-2">
             <ShieldCheck className="inline-block w-5 h-5 mr-2 text-yellow-400" />

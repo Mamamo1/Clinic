@@ -1,11 +1,10 @@
-"use client"
-
 import { useEffect, useState } from "react"
 import axios from "axios"
 
-export default function AddMedicalRecordsModal({ formData, onChange, onSave, onCancel }) {
+export default function AddMedicalRecordsModal({ formData, onChange, onSave, onCancel, onIllnessUpdate }) {
   const [staff, setStaff] = useState([])
   const [inventory, setInventory] = useState([])
+  // const [illnesses, setIllnesses] = useState([])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -61,6 +60,44 @@ export default function AddMedicalRecordsModal({ formData, onChange, onSave, onC
     })
   }
 
+  const handleSave = async () => {
+    try {
+
+      const token = localStorage.getItem("auth_token")
+      if (!token) {
+        console.error("[v0] No auth token found - this will cause submission to fail")
+        alert("Authentication token missing. Please log in again.")
+        return
+      }
+
+
+      const result = await onSave(formData)
+
+      if (result && result.data) {
+        if (result.data.illness_name === null) {
+          console.error("[v0] WARNING: Laravel saved illness_name as NULL despite sending:", formData.illness_name)
+          console.error("[v0] Check Laravel validation rules and $fillable array in MedicalRecord model")
+        }
+      }
+
+      if (onIllnessUpdate) {
+        onIllnessUpdate()
+      }
+    } catch (error) {
+      console.error("[v0] Error saving medical record:", error)
+      if (error.response) {
+        console.error("[v0] Server response:", error.response.data)
+        console.error("[v0] Status code:", error.response.status)
+        if (error.response.data && error.response.data.errors) {
+          console.error("[v0] Laravel validation errors:", error.response.data.errors)
+          if (error.response.data.errors.illness_name) {
+            console.error("[v0] Illness name validation failed:", error.response.data.errors.illness_name)
+          }
+        }
+      }
+    }
+  }
+
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
@@ -71,7 +108,7 @@ export default function AddMedicalRecordsModal({ formData, onChange, onSave, onC
               <h2 className="text-2xl font-bold text-white mb-1">Add Medical Record</h2>
               <p className="text-blue-100 text-sm">National University Health Services</p>
             </div>
-            <button 
+            <button
               onClick={onCancel}
               className="text-white hover:text-gray-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
             >
@@ -83,29 +120,39 @@ export default function AddMedicalRecordsModal({ formData, onChange, onSave, onC
         </div>
 
         {/* Content Section */}
-        <div className="p-8 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 200px)' }}>
+        <div className="p-8 overflow-y-auto" style={{ maxHeight: "calc(90vh - 200px)" }}>
           {/* Basic Information */}
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-[#2E3192] mb-4 border-b border-gray-200 pb-2">
               Basic Information
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
-                <input 
-                  type="date" 
-                  name="date" 
-                  value={formData.date || ""} 
-                  onChange={onChange} 
-                  className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-[#2E3192] focus:border-transparent transition-all duration-200" 
+                <input
+                  type="date"
+                  name="date"
+                  value={formData.date || ""}
+                  onChange={onChange}
+                  className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-[#2E3192] focus:border-transparent transition-all duration-200"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
+                <input
+                  type="time"
+                  name="visit_time"
+                  value={formData.visit_time || ""}
+                  onChange={onChange}
+                  className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-[#2E3192] focus:border-transparent transition-all duration-200"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Physician/Nurse</label>
-                <select 
-                  name="physician_nurse" 
-                  value={formData.physician_nurse || ""} 
-                  onChange={onChange} 
+                <select
+                  name="physician_nurse"
+                  value={formData.physician_nurse || ""}
+                  onChange={onChange}
                   className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-[#2E3192] focus:border-transparent transition-all duration-200"
                 >
                   <option value="">Select Physician or Nurse</option>
@@ -119,33 +166,56 @@ export default function AddMedicalRecordsModal({ formData, onChange, onSave, onC
             </div>
           </div>
 
-          {/* Chief Complaint */}
+          {/* Chief Complaint & Diagnosis */}
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-[#2E3192] mb-4 border-b border-gray-200 pb-2">
-              Chief Complaint
+              Chief Complaint & Diagnosis
             </h3>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Reason for Visit / Chief Complaint</label>
-              <textarea 
-                name="reason" 
-                value={formData.reason || ""} 
-                onChange={onChange} 
-                rows="4"
-                className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-[#2E3192] focus:border-transparent transition-all duration-200 resize-none"
-                placeholder="Please describe the reason for this visit..."
-              />
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for Visit / Chief Complaint
+                </label>
+                <textarea
+                  name="reason"
+                  value={formData.reason || ""}
+                  onChange={onChange}
+                  rows="4"
+                  className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-[#2E3192] focus:border-transparent transition-all duration-200 resize-none"
+                  placeholder="Please describe the reason for this visit..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Illness/Diagnosis (Optional)
+                  <p className="text-sm text-red-600 font-semibold mt-1">
+                    * This field is used for Illness Chart Tracking
+                  </p>
+                </label>
+                <input
+                  type="text"
+                  name="illness_name"
+                  value={formData.illness_name || ""}
+                  onChange={onChange}
+                  className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-[#2E3192] focus:border-transparent transition-all duration-200"
+                  placeholder="Enter illness or diagnosis (e.g., Common Cold, Headache, Fever) - Leave blank if patient only needs rest"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Optional - Leave blank if the patient only needs rest or no specific illness is diagnosed
+                </p>
+              </div>
             </div>
           </div>
 
           {/* Vital Signs Toggle */}
           <div className="mb-6">
             <label className="inline-flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer">
-              <input 
-                type="checkbox" 
-                name="includeVitals" 
-                checked={!!formData.includeVitals} 
-                onChange={handleCheckboxChange} 
-                className="w-5 h-5 text-[#2E3192] border-gray-300 rounded focus:ring-[#2E3192] focus:ring-2" 
+              <input
+                type="checkbox"
+                name="includeVitals"
+                checked={!!formData.includeVitals}
+                onChange={handleCheckboxChange}
+                className="w-5 h-5 text-[#2E3192] border-gray-300 rounded focus:ring-[#2E3192] focus:ring-2"
               />
               <span className="ml-3 text-sm font-medium text-gray-700">Include Vital Signs</span>
             </label>
@@ -156,27 +226,27 @@ export default function AddMedicalRecordsModal({ formData, onChange, onSave, onC
             <div className="mb-8 bg-gray-50 border border-gray-200 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-[#2E3192] mb-4">Vital Signs</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {['temperature', 'bloodPressure', 'pulseRate', 'respiratoryRate'].map((vital) => (
+                {["temperature", "bloodPressure", "pulseRate", "respiratoryRate"].map((vital) => (
                   <div key={vital}>
                     <label className="block text-sm font-medium text-gray-700 mb-2 capitalize">
-                      {vital.replace(/([A-Z])/g, ' $1')}
+                      {vital.replace(/([A-Z])/g, " $1")}
                     </label>
-                    <input 
-                      type="text" 
-                      name={vital} 
-                      value={formData[vital] || ""} 
-                      onChange={onChange} 
+                    <input
+                      type="text"
+                      name={vital}
+                      value={formData[vital] || ""}
+                      onChange={onChange}
                       className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-[#2E3192] focus:border-transparent transition-all duration-200"
-                      placeholder={`Enter ${vital.replace(/([A-Z])/g, ' $1').toLowerCase()}`}
+                      placeholder={`Enter ${vital.replace(/([A-Z])/g, " $1").toLowerCase()}`}
                     />
                   </div>
                 ))}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Allergies (if any)</label>
-                  <select 
-                    name="allergies" 
-                    value={formData.allergies || ""} 
-                    onChange={onChange} 
+                  <select
+                    name="allergies"
+                    value={formData.allergies || ""}
+                    onChange={onChange}
                     className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-[#2E3192] focus:border-transparent transition-all duration-200"
                   >
                     <option value="">Select</option>
@@ -187,10 +257,10 @@ export default function AddMedicalRecordsModal({ formData, onChange, onSave, onC
                 {formData.allergies === "Yes" && (
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Allergy Note</label>
-                    <textarea 
-                      name="allergyNote" 
-                      value={formData.allergyNote || ""} 
-                      onChange={onChange} 
+                    <textarea
+                      name="allergyNote"
+                      value={formData.allergyNote || ""}
+                      onChange={onChange}
                       rows="3"
                       className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-[#2E3192] focus:border-transparent transition-all duration-200 resize-none"
                       placeholder="Please specify allergies and reactions..."
@@ -213,9 +283,9 @@ export default function AddMedicalRecordsModal({ formData, onChange, onSave, onC
                     <select
                       value={med.id}
                       onChange={(e) => {
-                        const newMeds = [...formData.medicines];
-                        newMeds[index].id = e.target.value;
-                        onChange({ target: { name: "medicines", value: newMeds } });
+                        const newMeds = [...formData.medicines]
+                        newMeds[index].id = e.target.value
+                        onChange({ target: { name: "medicines", value: newMeds } })
                       }}
                       className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-[#2E3192] focus:border-transparent transition-all duration-200"
                     >
@@ -234,9 +304,9 @@ export default function AddMedicalRecordsModal({ formData, onChange, onSave, onC
                       className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-[#2E3192] focus:border-transparent transition-all duration-200 text-center"
                       value={med.quantity}
                       onChange={(e) => {
-                        const newMeds = [...formData.medicines];
-                        newMeds[index].quantity = parseInt(e.target.value) || 1;
-                        onChange({ target: { name: "medicines", value: newMeds } });
+                        const newMeds = [...formData.medicines]
+                        newMeds[index].quantity = Number.parseInt(e.target.value) || 1
+                        onChange({ target: { name: "medicines", value: newMeds } })
                       }}
                     />
                   </div>
@@ -244,12 +314,17 @@ export default function AddMedicalRecordsModal({ formData, onChange, onSave, onC
                     type="button"
                     className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors duration-200"
                     onClick={() => {
-                      const newMeds = formData.medicines.filter((_, i) => i !== index);
-                      onChange({ target: { name: "medicines", value: newMeds } });
+                      const newMeds = formData.medicines.filter((_, i) => i !== index)
+                      onChange({ target: { name: "medicines", value: newMeds } })
                     }}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -278,14 +353,14 @@ export default function AddMedicalRecordsModal({ formData, onChange, onSave, onC
         {/* Footer Section - Fixed positioning */}
         <div className="sticky bottom-0 bg-white px-8 py-6 border-t border-gray-200 shadow-lg">
           <div className="flex justify-end space-x-4">
-            <button 
-              onClick={onCancel} 
+            <button
+              onClick={onCancel}
               className="px-8 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200 font-medium text-base"
             >
               Cancel
             </button>
-            <button 
-              onClick={onSave} 
+            <button
+              onClick={handleSave}
               className="px-8 py-3 bg-[#2E3192] text-white rounded-lg hover:bg-[#252b7a] focus:outline-none focus:ring-2 focus:ring-[#2E3192] focus:ring-offset-2 transition-all duration-200 font-medium text-base shadow-md"
             >
               Save Medical Record

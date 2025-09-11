@@ -1,10 +1,13 @@
 "use client"
+
 import { useState, useEffect } from "react"
 import { capitalizeWords } from "../../utils"
 import { useParams } from "react-router-dom"
 import AddMedicalRecordsModal from "../Modals/AddMedicalRecordsModal"
 import axios from "axios"
-import { FileText, Plus, Eye, Edit3, Trash2, Stethoscope, Loader2, Heart, Save, X, Edit } from 'lucide-react'
+import { FileText, Plus, Eye, Edit3, Trash2, Stethoscope, Loader2, Heart, Save, X, Edit, Smile } from "lucide-react"
+import DentalRecordsModal from "../Modals/DentalRecordsModal"
+import { decryptUserData } from "../../crypto-utils"
 
 const UserDetail = () => {
   const [activeTab, setActiveTab] = useState("basic")
@@ -15,8 +18,10 @@ const UserDetail = () => {
   const [showModal, setShowModal] = useState(false)
   const [formData, setFormData] = useState({
     date: "",
+    visit_time: "",
     physician_nurse: "",
     reason: "",
+    illness_name: "",
     temperature: "",
     bloodPressure: "",
     allergies: "",
@@ -24,8 +29,6 @@ const UserDetail = () => {
   })
   const [records, setRecords] = useState([])
   const [deletingRecordId, setDeletingRecordId] = useState(null)
-
-  // Medical History State
   const [medicalHistory, setMedicalHistory] = useState({
     is_pwd: false,
     pwd_disability: "",
@@ -64,14 +67,38 @@ const UserDetail = () => {
   const [isEditingMedicalHistory, setIsEditingMedicalHistory] = useState(false)
   const [savingMedicalHistory, setSavingMedicalHistory] = useState(false)
 
-  const personalInfoFields = [
-    "first_name",
-    "middle_name",
-    "last_name",
-    "gender",
-    "date_of_birth",
-    "email",
-  ]
+  const [dentalHistory, setDentalHistory] = useState({
+    previous_dentist: "",
+    last_dental_visit: "",
+    last_tooth_extraction: "",
+    allergy_anesthesia: false,
+    allergy_pain_reliever: false,
+    last_dental_procedure: "",
+    dental_notes: "",
+  })
+  const [isEditingDentalHistory, setIsEditingDentalHistory] = useState(false)
+  const [savingDentalHistory, setSavingDentalHistory] = useState(false)
+
+  const [dentalRecords, setDentalRecords] = useState([])
+  const [showDentalModal, setShowDentalModal] = useState(false)
+  const [dentalFormData, setDentalFormData] = useState({
+    examination_date: "",
+    school_dentist: "",
+    purpose: [""],
+    oral_hygiene: "good",
+    decayed_teeth_count: 0,
+    extraction_teeth_count: 0,
+    teeth_conditions: [],
+    oral_prophylaxis_treatment: "",
+    tooth_filling_treatment: "",
+    tooth_extraction_treatment: "",
+    other_treatments: "",
+    remarks: "",
+    next_appointment: "",
+  })
+  const [deletingDentalRecordId, setDeletingDentalRecordId] = useState(null)
+
+  const personalInfoFields = ["first_name", "middle_name", "last_name", "gender", "date_of_birth", "email"]
 
   const addressFields = ["mobile", "telephone", "state", "city", "street"]
 
@@ -115,48 +142,49 @@ const UserDetail = () => {
   ]
 
   useEffect(() => {
-    const fetchUser = async () => {
-      setLoading(true)
-      setError(null)
+    const fetchUserData = async () => {
       try {
+        setLoading(true)
         const token = localStorage.getItem("auth_token")
-        if (!token) throw new Error("No auth token found")
-
-        const res = await fetch(`http://localhost:8000/api/users/${id}`, {
+        const response = await axios.get(`http://localhost:8000/api/users/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: "application/json",
           },
         })
 
-        if (!res.ok) {
-          const data = await res.json()
-          throw new Error(data.message || "Failed to fetch user data")
+        let processedData = response.data.data || response.data
+
+        // Apply decryption if secret key is available
+        const secretKey = import.meta.env.VITE_AES_SECRET_KEY || import.meta.env.REACT_APP_AES_SECRET_KEY
+        if (secretKey) {
+          processedData = decryptUserData(processedData)
         }
 
-        const json = await res.json()
-        setUserData(json.data)
-      } catch (err) {
-        setError(err.message)
+        setUserData(processedData)
+      } catch (error) {
+        console.error("Error fetching user data:", error)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchUser()
+    if (id) {
+      fetchUserData()
+    }
   }, [id])
 
   const fetchMedicalHistory = async () => {
     try {
       const token = localStorage.getItem("auth_token")
-      
+
       const response = await axios.get(`http://localhost:8000/api/medical-history/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/json",
         },
       })
-           
+
       if (response.data.success && response.data.data) {
         setMedicalHistory(response.data.data)
       }
@@ -166,7 +194,52 @@ const UserDetail = () => {
         console.error("Medical history fetch error details:", {
           status: err.response?.status,
           data: err.response?.data,
-          message: err.message
+          message: err.message,
+        })
+      }
+    }
+  }
+
+  const fetchDentalHistory = async () => {
+    try {
+      const token = localStorage.getItem("auth_token")
+
+      const response = await axios.get(`http://localhost:8000/api/dental-history/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      })
+
+      if (response.data.success && response.data.data) {
+        const sanitizedData = {
+          previous_dentist: response.data.data.previous_dentist || "",
+          last_dental_visit: response.data.data.last_dental_visit || "",
+          last_tooth_extraction: response.data.data.last_tooth_extraction || "",
+          allergy_anesthesia: Boolean(response.data.data.allergy_anesthesia),
+          allergy_pain_reliever: Boolean(response.data.data.allergy_pain_reliever),
+          last_dental_procedure: response.data.data.last_dental_procedure || "",
+          additional_notes: response.data.data.additional_notes || "",
+        }
+        setDentalHistory(sanitizedData)
+      }
+    } catch (err) {
+      if (err.response?.status === 404) {
+        setDentalHistory({
+          previous_dentist: "",
+          last_dental_visit: "",
+          last_tooth_extraction: "",
+          allergy_anesthesia: false,
+          allergy_pain_reliever: false,
+          last_dental_procedure: "",
+          additional_notes: "",
+        })
+      } else {
+        console.error("Error fetching dental history:", err)
+        console.error("Dental history fetch error details:", {
+          status: err.response?.status,
+          data: err.response?.data,
+          message: err.message,
         })
       }
     }
@@ -202,11 +275,44 @@ const UserDetail = () => {
     }
   }
 
+  const fetchDentalRecords = async () => {
+    try {
+      const token = localStorage.getItem("auth_token")
+      if (!token) throw new Error("No auth token found")
+      const response = await axios.get(`http://localhost:8000/api/dental-records/user/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      })
+      const recordsArray = response.data.data?.data || []
+      setDentalRecords(recordsArray)
+    } catch (err) {
+      console.error("[v0] Error fetching dental records:", err)
+      if (err.response) {
+        console.error("[v0] Response status:", err.response.status)
+        console.error("[v0] Response data:", err.response.data)
+        if (err.response.status === 404) {
+          setDentalRecords([])
+        } else if (err.response.status !== 500) {
+          alert(`Error fetching dental records: ${err.response.data?.message || "Server error"}`)
+        }
+      } else {
+        console.error("[v0] Network error:", err.message)
+      }
+      setDentalRecords([])
+    }
+  }
+
   useEffect(() => {
     if (activeTab === "records") {
       fetchMedicalRecords()
     } else if (activeTab === "medicalHistory") {
       fetchMedicalHistory()
+    } else if (activeTab === "dentalHistory") {
+      fetchDentalHistory()
+    } else if (activeTab === "dental") {
+      fetchDentalRecords()
     }
   }, [activeTab, id])
 
@@ -218,9 +324,23 @@ const UserDetail = () => {
     }))
   }
 
+  const handleDentalChange = (e) => {
+    const { name, value, type, checked } = e.target
+    setDentalFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }))
+  }
+
   const handleMedicalHistoryChange = (field, value) => {
-    console.log("Medical history field changed:", field, value)
     setMedicalHistory((prev) => ({
+      ...prev,
+      [field]: value,
+    }))
+  }
+
+  const handleDentalHistoryChange = (field, value) => {
+    setDentalHistory((prev) => ({
       ...prev,
       [field]: value,
     }))
@@ -228,20 +348,14 @@ const UserDetail = () => {
 
   const handleSaveMedicalHistory = async () => {
     setSavingMedicalHistory(true)
-    
+
     try {
       const token = localStorage.getItem("auth_token")
       if (!token) {
         alert("Authentication token not found. Please login again.")
         return
       }
-
-      console.log("Saving medical history for user:", id)
-      console.log("Medical history data before save:", medicalHistory)
-
-      // Prepare payload with proper data types
       const payload = {
-        // Convert all boolean fields explicitly
         is_pwd: Boolean(medicalHistory.is_pwd),
         pwd_disability: medicalHistory.pwd_disability || "",
         anemia: Boolean(medicalHistory.anemia),
@@ -277,9 +391,6 @@ const UserDetail = () => {
         allergies_specify: medicalHistory.allergies_specify || "",
       }
 
-      console.log("Payload being sent:", payload)
-
-      // Use the correct API endpoint with user_id in the URL
       const response = await axios.post(`http://localhost:8000/api/medical-history/${id}`, payload, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -287,30 +398,25 @@ const UserDetail = () => {
           "Content-Type": "application/json",
         },
       })
-
-      console.log("Save response:", response.data)
-
       if (response.data.success) {
         setIsEditingMedicalHistory(false)
         alert("Medical history saved successfully!")
-        // Refresh the medical history data
         fetchMedicalHistory()
       } else {
         throw new Error(response.data.message || "Failed to save medical history")
       }
-
     } catch (err) {
       console.error("Error saving medical history:", err)
-      
+
       let errorMessage = "Failed to save medical history. Please try again."
-      
+
       if (err.response) {
         console.error("Error response:", {
           status: err.response.status,
           data: err.response.data,
-          headers: err.response.headers
+          headers: err.response.headers,
         })
-        
+
         if (err.response.status === 401) {
           errorMessage = "Authentication failed. Please login again."
         } else if (err.response.status === 403) {
@@ -329,73 +435,272 @@ const UserDetail = () => {
       } else if (err.message) {
         errorMessage = err.message
       }
-      
+
       alert(errorMessage)
     } finally {
       setSavingMedicalHistory(false)
     }
   }
 
+  const handleSaveDentalHistory = async () => {
+    try {
+      const payload = {
+        previous_dentist: dentalHistory.previous_dentist || "",
+        last_dental_visit: dentalHistory.last_dental_visit || null,
+        last_tooth_extraction: dentalHistory.last_tooth_extraction || "",
+        allergy_anesthesia: dentalHistory.allergy_anesthesia,
+        allergy_pain_reliever: dentalHistory.allergy_pain_reliever,
+        last_dental_procedure: dentalHistory.last_dental_procedure || "",
+        additional_notes: dentalHistory.dental_notes || "",
+      }
+
+      const authToken = localStorage.getItem("auth_token") || "Bearer dummy-token-for-testing"
+      const headers = {
+        Authorization: authToken,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      }
+
+      const response = await axios.post(`http://localhost:8000/api/dental-history/${id}`, payload, { headers })
+
+      if (response.data.success) {
+        setIsEditingDentalHistory(false)
+        alert("Dental history saved successfully!")
+        fetchDentalHistory()
+      } else {
+        throw new Error(response.data.message || "Failed to save dental history")
+      }
+    } catch (err) {
+      console.error("Error saving dental history:", err)
+      if (err.response?.data?.errors) {
+        Object.keys(err.response.data.errors).forEach((field) => {})
+      }
+
+      let errorMessage = "Failed to save dental history. Please try again."
+
+      if (err.response?.status === 500) {
+        errorMessage =
+          "Server error occurred. Please check if the Laravel backend is running and the database is connected."
+      } else if (err.response?.status === 422) {
+        const validationErrors = err.response.data.errors
+        if (validationErrors) {
+          const errorDetails = Object.keys(validationErrors)
+            .map((field) => `${field}: ${validationErrors[field].join(", ")}`)
+            .join("\n")
+          errorMessage = `Validation errors:\n${errorDetails}`
+        } else {
+          errorMessage = "Validation error: " + (err.response.data.message || "Invalid data provided")
+        }
+      } else if (err.response?.status === 401) {
+        errorMessage = "Authentication failed. Please login again or check your auth token."
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message
+      } else if (err.message) {
+        errorMessage = err.message
+      }
+
+      alert(errorMessage)
+    } finally {
+      setSavingDentalHistory(false)
+    }
+  }
+
   const handleCancelMedicalHistory = () => {
     setIsEditingMedicalHistory(false)
-    fetchMedicalHistory() // Reload original data
+    fetchMedicalHistory()
+  }
+
+  const handleCancelDentalHistory = () => {
+    setIsEditingDentalHistory(false)
+    fetchDentalHistory()
   }
 
   const handleSave = async () => {
+  try {
+    const token = localStorage.getItem("auth_token")
+    if (!formData.date || !formData.physician_nurse || !formData.reason) {
+      alert("Please fill in all required fields (Date, Physician/Nurse, and Reason)")
+      return
+    }
+
+    // Debug logging
+    console.log("Form data before submission:", formData)
+    console.log("User ID being used:", id)
+
+    const payload = {
+      user_id: id,
+      date: formData.date,
+      visit_time: formData.visit_time || null,
+      physician_nurse: formData.physician_nurse,
+      reason: formData.reason,
+      illness_name: formData.illness_name || null,
+      temperature: formData.temperature || null,
+      blood_pressure: formData.bloodPressure || null, // Fixed field name
+      allergies: formData.allergies || null,
+      medicines: formData.medicines || [],
+    }
+
+    console.log("Payload being sent to Laravel:", payload)
+
+    const response = await axios.post("http://localhost:8000/api/medical-records", payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+    })
+
+    console.log("Laravel response:", response.data)
+
+    if (response.data && response.data.record && response.data.record.illness_name === null && formData.illness_name) {
+      console.warn("WARNING: Laravel saved illness_name as NULL despite sending:", formData.illness_name)
+      console.warn("Check Laravel controller validation and MedicalRecord model $fillable array")
+    }
+
+    alert("Medical record saved successfully!")
+    setShowModal(false)
+    setFormData({
+      date: "",
+      visit_time: "",
+      physician_nurse: "",
+      reason: "",
+      illness_name: "",
+      temperature: "",
+      bloodPressure: "",
+      allergies: "",
+      medicines: [],
+    })
+    fetchMedicalRecords()
+
+    return response
+  } catch (error) {
+    console.error("Full error object:", error)
+    let errorMessage = "Unknown error occurred"
+
+    if (error.response?.data?.errors) {
+      const errors = Object.values(error.response.data.errors).flat()
+      errorMessage = errors.join(", ")
+      console.error("Laravel validation errors:", error.response.data.errors)
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.response?.data?.error) {
+      errorMessage = error.response.data.error
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+
+    alert(`Failed to save medical record: ${errorMessage}`)
+    throw error
+  }
+}
+
+  const handleSaveDentalRecord = async (modalData = null) => {
     try {
       const token = localStorage.getItem("auth_token")
-      if (!formData.date || !formData.physician_nurse || !formData.reason) {
-        alert("Please fill in all required fields (Date, Physician/Nurse, and Reason)")
+      const dataToSave = modalData || dentalFormData
+      if (!dataToSave.examination_date || !dataToSave.school_dentist || !dataToSave.purpose?.[0]) {
+        alert("Please fill in all required fields (Date, Dentist, and Purpose)")
         return
       }
 
       const payload = {
         user_id: id,
-        date: formData.date,
-        physician_nurse: formData.physician_nurse,
-        reason: formData.reason,
-        temperature: formData.temperature || null,
-        bloodPressure: formData.bloodPressure || null,
-        allergies: formData.allergies || null,
-        medicines: formData.medicines || [],
+        examination_date: dataToSave.examination_date,
+        purpose: Array.isArray(dataToSave.purpose)
+          ? dataToSave.purpose.filter((p) => p.trim() !== "")
+          : [dataToSave.purpose].filter((p) => p),
+        oral_hygiene: dataToSave.oral_hygiene,
+        decayed_teeth_count: Number.parseInt(dataToSave.decayed_teeth_count) || 0,
+        extraction_teeth_count: Number.parseInt(dataToSave.extraction_teeth_count) || 0,
+        teeth_conditions: dataToSave.teeth_conditions || [],
+        school_dentist: dataToSave.school_dentist,
+        oral_prophylaxis_treatment: dataToSave.oral_prophylaxis_treatment || "",
+        tooth_filling_treatment: dataToSave.tooth_filling_treatment || "",
+        tooth_extraction_treatment: dataToSave.tooth_extraction_treatment || "",
+        other_treatments: dataToSave.other_treatments || "",
+        remarks: dataToSave.remarks || "",
+        next_appointment: dataToSave.next_appointment || "",
+        oral_prophylaxis_notes: dataToSave.oral_prophylaxis_notes || "",
+        other_notes: dataToSave.other_notes || "",
+        tooth_extraction_numbers: dataToSave.tooth_extraction_numbers || "",
+        tooth_filling_numbers: dataToSave.tooth_filling_numbers || "",
+      }
+      if (!payload.user_id) {
+        console.error("[v0] CRITICAL ERROR - user_id is missing or undefined!")
+        console.error("[v0] id variable value:", id)
+        alert("Critical Error: User ID is missing. Cannot save dental record.")
+        return
       }
 
-      const response = await axios.post("http://localhost:8000/api/medical-records", payload, {
+      const cleanPayload = Object.fromEntries(
+        Object.entries(payload).filter(
+          ([key, value]) => value !== undefined && value !== null && key !== "teethConditions",
+        ),
+      )
+
+      const requestConfig = {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/json",
           "Content-Type": "application/json",
         },
-      })
-
-      alert("Medical record saved successfully!")
-      setShowModal(false)
-      setFormData({
-        date: "",
-        physician_nurse: "",
-        reason: "",
-        temperature: "",
-        bloodPressure: "",
-        allergies: "",
-        medicines: [],
-      })
-      fetchMedicalRecords()
-    } catch (error) {
-      console.error("Full error object:", error)
-      let errorMessage = "Unknown error occurred"
-
-      if (error.response?.data?.errors) {
-        const errors = Object.values(error.response.data.errors).flat()
-        errorMessage = errors.join(", ")
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message
-      } else if (error.response?.data?.error) {
-        errorMessage = error.response.data.error
-      } else if (error.message) {
-        errorMessage = error.message
       }
+      const response = await axios.post("http://localhost:8000/api/dental-records", cleanPayload, requestConfig)
+      if (response.data && response.data.success) {
+        alert(`Dental record saved successfully! Record ID: ${response.data.data?.id || "Unknown"}`)
+        setShowDentalModal(false)
 
-      alert(`Failed to save medical record: ${errorMessage}`)
+        await fetchDentalRecords()
+
+        setDentalFormData({
+          examination_date: "",
+          school_dentist: "",
+          purpose: [""],
+          oral_hygiene: "good",
+          decayed_teeth_count: 0,
+          extraction_teeth_count: 0,
+          teeth_conditions: [],
+          oral_prophylaxis_treatment: "",
+          tooth_filling_treatment: "",
+          tooth_extraction_treatment: "",
+          other_treatments: "",
+          remarks: "",
+          next_appointment: "",
+        })
+      } else {
+        console.error("[v0] ERROR - Unexpected response format:", response.data)
+        alert("Unexpected response from server. Please check the console for details.")
+      }
+    } catch (error) {
+      console.error("=== ERROR OCCURRED ===")
+      console.error("[v0] Error saving dental record:", error)
+      console.error("[v0] Error details:", {
+        message: error.message,
+        response: error.response,
+        request: error.request,
+        config: error.config,
+      })
+
+      if (error.response) {
+        const { status, data } = error.response
+        console.error("[v0] Server error response:", data)
+        console.error("[v0] Server error status:", status)
+
+        if (status === 422 && data.errors) {
+          console.error("[v0] Validation errors:", data.errors)
+          const errorMessages = Object.values(data.errors).flat().join("\n")
+          alert(`Validation Error:\n${errorMessages}`)
+        } else if (data.message) {
+          alert(`Error: ${data.message}`)
+        } else {
+          alert(`Server Error (${status}): Please check the console for details.`)
+        }
+      } else if (error.request) {
+        console.error("[v0] Network error:", error.request)
+        alert("Network Error: Could not connect to server. Please check if the Laravel backend is running.")
+      } else {
+        alert(`Error: ${error.message}`)
+      }
     }
   }
 
@@ -412,9 +717,26 @@ const UserDetail = () => {
     setShowModal(false)
   }
 
-  const fetchStaffAndInventory = async () => {
-    // This function can be implemented later if needed for the modal
+  const handleCancelDentalRecord = () => {
+    setDentalFormData({
+      examination_date: "",
+      school_dentist: "",
+      purpose: [""],
+      oral_hygiene: "good",
+      decayed_teeth_count: 0,
+      extraction_teeth_count: 0,
+      teeth_conditions: [],
+      oral_prophylaxis_treatment: "",
+      tooth_filling_treatment: "",
+      tooth_extraction_treatment: "",
+      other_treatments: "",
+      remarks: "",
+      next_appointment: "",
+    })
+    setShowDentalModal(false)
   }
+
+  const fetchStaffAndInventory = async () => {}
 
   const handleDeleteRecord = async (record, index) => {
     if (!confirm("Are you sure you want to delete this medical record?")) {
@@ -463,8 +785,66 @@ const UserDetail = () => {
     }
   }
 
+  const handleDeleteDentalRecord = async (record, index) => {
+    if (!confirm("Are you sure you want to delete this dental record?")) {
+      return
+    }
+
+    if (!record || !record.id) {
+      console.error("Record or record ID is missing:", record)
+      alert("Cannot delete record: Record ID is missing")
+      return
+    }
+
+    setDeletingDentalRecordId(record.id)
+    try {
+      const token = localStorage.getItem("auth_token")
+      if (!token) {
+        alert("Authentication required")
+        return
+      }
+
+      const response = await axios.delete(`http://localhost:8000/api/dental-records/${record.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+      })
+
+      setDentalRecords((prev) => prev.filter((_, i) => i !== index))
+      alert("Dental record deleted successfully!")
+    } catch (error) {
+      console.error("Error deleting dental record:", error)
+      let errorMessage = "Failed to delete dental record"
+
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+
+      alert(errorMessage)
+    } finally {
+      setDeletingDentalRecordId(null)
+    }
+  }
+
   const getActiveConditions = () => {
     return medicalConditions.filter((condition) => medicalHistory[condition.key])
+  }
+
+  const formatTime12Hour = (time24) => {
+    if (!time24) return null
+
+    const [hours, minutes] = time24.split(":")
+    const hour = Number.parseInt(hours, 10)
+    const ampm = hour >= 12 ? "PM" : "AM"
+    const hour12 = hour % 12 || 12 // Convert 0 to 12 for midnight
+
+    return `${hour12}:${minutes} ${ampm}`
   }
 
   if (loading) {
@@ -560,7 +940,6 @@ const UserDetail = () => {
             </div>
 
             {!isEditingMedicalHistory ? (
-              // View Mode
               <div className="space-y-6">
                 {/* PWD Status */}
                 <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
@@ -633,7 +1012,6 @@ const UserDetail = () => {
                 )}
               </div>
             ) : (
-              // Edit Mode
               <div className="space-y-6">
                 {/* PWD Section */}
                 <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
@@ -763,6 +1141,7 @@ const UserDetail = () => {
                         <div className="w-12 h-12 bg-blue-800 rounded-lg flex items-center justify-center shadow-sm">
                           <Stethoscope className="w-6 h-6 text-yellow-400" />
                         </div>
+
                         <div className="ml-4">
                           <h3 className="font-semibold text-blue-800 text-lg">{record.reason_for_visit || "N/A"}</h3>
                           <p className="text-gray-600 text-sm">
@@ -773,7 +1152,15 @@ const UserDetail = () => {
                                 month: "long",
                                 day: "numeric",
                               })}
+                            {record.visit_time && (
+                              <span className="ml-2 text-blue-600 font-medium">
+                                at {formatTime12Hour(record.visit_time)}
+                              </span>
+                            )}
                           </p>
+                          {record.illness_name && (
+                            <p className="text-red-600 text-sm font-medium mt-1">Illness: {record.illness_name}</p>
+                          )}
                         </div>
                       </div>
                       <div className="flex space-x-2">
@@ -827,6 +1214,13 @@ const UserDetail = () => {
                       )}
                     </div>
 
+                    {record.diagnosis && (
+                      <div className="bg-indigo-50 rounded-lg p-4 mb-4 shadow-sm">
+                        <h4 className="font-medium text-indigo-700 text-sm mb-2">Diagnosis</h4>
+                        <p className="text-gray-900">{record.diagnosis}</p>
+                      </div>
+                    )}
+
                     {record.allergies && (
                       <div className="bg-orange-50 rounded-lg p-4 mb-4 shadow-sm">
                         <h4 className="font-medium text-orange-700 text-sm mb-2">Allergies</h4>
@@ -869,19 +1263,402 @@ const UserDetail = () => {
           </div>
         )
 
-      case "dental":
+      case "dentalHistory":
         return (
-          <div className="mt-4 text-blue-800 p-6 bg-white rounded-lg shadow-md border-l-4 border-yellow-400">
-            <h3 className="text-xl font-semibold mb-4">Dental Records</h3>
-            <p className="text-gray-600">Dental records functionality will be implemented here.</p>
+          <div className="mt-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-md">
+                  <Smile className="w-6 h-6 text-white" />
+                </div>
+                <h2 className="text-xl font-semibold ml-3 text-blue-800">Dental History</h2>
+              </div>
+              <div className="flex gap-2">
+                {!isEditingDentalHistory ? (
+                  <button
+                    onClick={() => setIsEditingDentalHistory(true)}
+                    className="inline-flex items-center px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors shadow-md text-sm"
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Dental History
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleCancelDentalHistory}
+                      className="inline-flex items-center px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors shadow-md text-sm"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveDentalHistory}
+                      disabled={savingDentalHistory}
+                      className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md disabled:opacity-50 text-sm"
+                    >
+                      {savingDentalHistory ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
+                      Save Changes
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {!isEditingDentalHistory ? (
+              <div className="space-y-6">
+                <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                  <h4 className="text-lg font-semibold text-blue-800 mb-4">Dental History Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-base font-medium text-gray-700 mb-1">Previous Dentist</label>
+                      <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+                        <span className="text-gray-700 text-base">
+                          {dentalHistory.previous_dentist || "Not specified"}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-base font-medium text-gray-700 mb-1">Last Dental Visit</label>
+                      <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+                        <span className="text-gray-700 text-base">
+                          {dentalHistory.last_dental_visit || "Not specified"}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-base font-medium text-gray-700 mb-1">
+                        Last Tooth Extraction (Bunot)
+                      </label>
+                      <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+                        <span className="text-gray-700 text-base">
+                          {dentalHistory.last_tooth_extraction || "Not specified"}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-base font-medium text-gray-700 mb-1">Last Dental Procedure</label>
+                      <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+                        <span className="text-gray-700 text-base">
+                          {dentalHistory.last_dental_procedure || "Not specified"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Allergies Section */}
+                <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                  <h4 className="text-lg font-semibold text-blue-800 mb-4">Dental Allergies</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-base font-medium text-gray-700 mb-1">
+                        Allergy to Anesthesia (Lidocaine)
+                      </label>
+                      <div
+                        className={`p-4 rounded-lg text-base ${
+                          dentalHistory.allergy_anesthesia
+                            ? "bg-red-50 border border-red-200"
+                            : "bg-green-50 border border-green-200"
+                        }`}
+                      >
+                        <span
+                          className={`font-medium ${
+                            dentalHistory.allergy_anesthesia ? "text-red-700" : "text-green-700"
+                          }`}
+                        >
+                          {dentalHistory.allergy_anesthesia ? "YES" : "NO"}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-base font-medium text-gray-700 mb-1">
+                        Allergy to Pain Reliever OR Antibiotics
+                      </label>
+                      <div
+                        className={`p-4 rounded-lg text-base ${
+                          dentalHistory.allergy_pain_reliever
+                            ? "bg-red-50 border border-red-200"
+                            : "bg-green-50 border border-green-200"
+                        }`}
+                      >
+                        <span
+                          className={`font-medium ${
+                            dentalHistory.allergy_pain_reliever ? "text-red-700" : "text-green-700"
+                          }`}
+                        >
+                          {dentalHistory.allergy_pain_reliever ? "YES" : "NO"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes Section */}
+                {dentalHistory.dental_notes && (
+                  <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                    <h4 className="text-lg font-semibold text-blue-800 mb-4">Additional Notes</h4>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <p className="text-blue-800 text-base">{dentalHistory.dental_notes}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                  <h4 className="text-lg font-semibold text-blue-800 mb-4">Dental History Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-base font-medium text-gray-700 mb-2">Previous Dentist</label>
+                      <input
+                        type="text"
+                        value={dentalHistory.previous_dentist}
+                        onChange={(e) => handleDentalHistoryChange("previous_dentist", e.target.value)}
+                        className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter previous dentist name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-base font-medium text-gray-700 mb-2">Last Dental Visit</label>
+                      <input
+                        type="date"
+                        value={dentalHistory.last_dental_visit}
+                        onChange={(e) => handleDentalHistoryChange("last_dental_visit", e.target.value)}
+                        className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-base font-medium text-gray-700 mb-2">
+                        Last Tooth Extraction (Bunot)
+                      </label>
+                      <input
+                        type="text"
+                        value={dentalHistory.last_tooth_extraction}
+                        onChange={(e) => handleDentalHistoryChange("last_tooth_extraction", e.target.value)}
+                        className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter details about last tooth extraction"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-base font-medium text-gray-700 mb-2">Last Dental Procedure</label>
+                      <input
+                        type="text"
+                        value={dentalHistory.last_dental_procedure}
+                        onChange={(e) => handleDentalHistoryChange("last_dental_procedure", e.target.value)}
+                        className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter last dental procedure"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Allergies Section */}
+                <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                  <h4 className="text-lg font-semibold text-blue-800 mb-4">Dental Allergies</h4>
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-base font-medium text-gray-700 mb-2">
+                        Allergy to Anesthesia (Lidocaine)
+                      </label>
+                      <div className="flex gap-4">
+                        <label className="flex items-center text-base">
+                          <input
+                            type="radio"
+                            name="allergy_anesthesia"
+                            checked={dentalHistory.allergy_anesthesia === true}
+                            onChange={() => handleDentalHistoryChange("allergy_anesthesia", true)}
+                            className="mr-2"
+                          />
+                          YES
+                        </label>
+                        <label className="flex items-center text-base">
+                          <input
+                            type="radio"
+                            name="allergy_anesthesia"
+                            checked={dentalHistory.allergy_anesthesia === false}
+                            onChange={() => handleDentalHistoryChange("allergy_anesthesia", false)}
+                            className="mr-2"
+                          />
+                          NO
+                        </label>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-base font-medium text-gray-700 mb-2">
+                        Allergy to Pain Reliever OR Antibiotics
+                      </label>
+                      <div className="flex gap-4">
+                        <label className="flex items-center text-base">
+                          <input
+                            type="radio"
+                            name="allergy_pain_reliever"
+                            checked={dentalHistory.allergy_pain_reliever === true}
+                            onChange={() => handleDentalHistoryChange("allergy_pain_reliever", true)}
+                            className="mr-2"
+                          />
+                          YES
+                        </label>
+                        <label className="flex items-center text-base">
+                          <input
+                            type="radio"
+                            name="allergy_pain_reliever"
+                            checked={dentalHistory.allergy_pain_reliever === false}
+                            onChange={() => handleDentalHistoryChange("allergy_pain_reliever", false)}
+                            className="mr-2"
+                          />
+                          NO
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes Section */}
+                <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                  <h4 className="text-lg font-semibold text-blue-800 mb-4">Additional Notes</h4>
+                  <textarea
+                    value={dentalHistory.dental_notes}
+                    onChange={(e) => handleDentalHistoryChange("dental_notes", e.target.value)}
+                    className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows="4"
+                    placeholder="Enter any additional dental history notes..."
+                  />
+                </div>
+              </div>
+            )}
           </div>
         )
 
-      default:
+      case "dental":
         return (
-          <div className="mt-4 text-blue-800 p-6 bg-white rounded-lg shadow-md border-l-4 border-yellow-400">
-            <h3 className="text-xl font-semibold mb-4">Content</h3>
-            <p className="text-gray-600">Content goes here...</p>
+          <div className="mt-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-blue-800 rounded-lg flex items-center justify-center shadow-md">
+                  <FileText className="w-5 h-5 text-yellow-400" />
+                </div>
+                <h2 className="text-xl font-semibold ml-3 text-blue-800">Dental Records</h2>
+              </div>
+              <button
+                onClick={() => setShowDentalModal(true)}
+                className="inline-flex items-center px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors shadow-md"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add New Dental Record
+              </button>
+            </div>
+
+            {dentalRecords.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+                <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500 text-lg">No dental records found</p>
+                <p className="text-sm text-gray-400 mt-2">Click "Add New Dental Record" to create the first record</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {dentalRecords.map((record, index) => (
+                  <div
+                    key={record.id || index}
+                    className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow border-l-8 border-yellow-400"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center">
+                        <div className="w-12 h-12 bg-blue-800 rounded-lg flex items-center justify-center shadow-sm">
+                          <FileText className="w-6 h-6 text-yellow-400" />
+                        </div>
+                        <div className="ml-4">
+                          <h3 className="font-semibold text-blue-800 text-lg">Dental Examination </h3>
+                          <p className="text-gray-600 text-sm">
+                            {record.examination_date &&
+                              new Date(record.examination_date).toLocaleDateString("en-US", {
+                                weekday: "long",
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          className="p-2 text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          className="p-2 text-gray-500 hover:bg-gray-50 rounded-lg transition-colors"
+                          title="Edit Record"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteDentalRecord(record, index)}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Delete"
+                          disabled={deletingRecordId === record.id}
+                        >
+                          {deletingRecordId === record.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div className="bg-blue-50 p-3 rounded-lg">
+                        <span className="text-xs font-medium text-blue-600 uppercase tracking-wide">Oral Hygiene</span>
+                        <p className="text-sm font-semibold text-blue-800 capitalize mt-1">
+                          {record.oral_hygiene || "Not assessed"}
+                        </p>
+                      </div>
+                      <div className="bg-red-50 p-3 rounded-lg">
+                        <span className="text-xs font-medium text-red-600 uppercase tracking-wide">Decayed Teeth</span>
+                        <p className="text-sm font-semibold text-red-800 mt-1">{record.decayed_teeth_count || 0}</p>
+                      </div>
+                      <div className="bg-yellow-50 p-3 rounded-lg">
+                        <span className="text-xs font-medium text-yellow-600 uppercase tracking-wide">
+                          For Extraction
+                        </span>
+                        <p className="text-sm font-semibold text-yellow-800 mt-1">
+                          {record.extraction_teeth_count || 0}
+                        </p>
+                      </div>
+                    </div>
+
+                    {record.school_dentist && (
+                      <div className="mb-3">
+                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                          School Dentist
+                        </span>
+                        <p className="text-sm text-gray-700 mt-1">{record.school_dentist}</p>
+                      </div>
+                    )}
+
+                    {record.other_notes && (
+                      <div className="pt-3 border-t border-gray-100">
+                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Notes</span>
+                        <p className="text-sm text-gray-600 mt-1">{record.other_notes}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <DentalRecordsModal
+              isOpen={showDentalModal}
+              onClose={() => setShowDentalModal(false)}
+              userId={id}
+              onSave={handleSaveDentalRecord}
+            />
           </div>
         )
     }
@@ -905,7 +1682,7 @@ const UserDetail = () => {
             </div>
             <div className="flex-1">
               <h2 className="text-2xl font-bold text-blue-800">
-              {userData.first_name} {userData.middle_name} {userData.last_name}
+                {userData.first_name} {userData.middle_name} {userData.last_name}
               </h2>
               <p className="text-gray-700 mt-1">
                 Course: <span className="font-semibold">{userData.course || "N/A"}</span>
@@ -925,6 +1702,7 @@ const UserDetail = () => {
               ["basic", "Basic Information"],
               ["medicalHistory", "Medical History"],
               ["records", "Medical Records"],
+              ["dentalHistory", "Dental History"],
               ["dental", "Dental Records"],
             ].map(([key, label]) => (
               <button

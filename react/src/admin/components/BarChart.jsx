@@ -1,5 +1,5 @@
 import { useState, useRef } from "react"
-import { Minus, X, ChevronDown } from "lucide-react"
+import { FaMinus, FaChevronDown } from "react-icons/fa"
 
 const BarChart = ({ title = "Most Used Medicines", onMinimize, onRemove }) => {
   const [isMinimized, setIsMinimized] = useState(false)
@@ -92,14 +92,7 @@ const BarChart = ({ title = "Most Used Medicines", onMinimize, onRemove }) => {
             className="text-white hover:text-[#ffc72c] p-1 transition-colors duration-200"
             aria-label={isMinimized ? "Expand" : "Minimize"}
           >
-            <Minus size={14} />
-          </button>
-          <button
-            onClick={handleRemove}
-            className="text-white hover:text-[#ffc72c] p-1 transition-colors duration-200"
-            aria-label="Remove"
-          >
-            <X size={14} />
+            <FaMinus size={14} />
           </button>
         </div>
       </div>
@@ -126,7 +119,7 @@ const BarChart = ({ title = "Most Used Medicines", onMinimize, onRemove }) => {
                     </option>
                   ))}
                 </select>
-                <ChevronDown
+                <FaChevronDown
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
                   size={12}
                 />
@@ -146,7 +139,7 @@ const BarChart = ({ title = "Most Used Medicines", onMinimize, onRemove }) => {
                     </option>
                   ))}
                 </select>
-                <ChevronDown
+                <FaChevronDown
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
                   size={12}
                 />

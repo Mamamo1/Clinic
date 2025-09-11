@@ -5,8 +5,6 @@ const LoadingScreen = () => {
   const { loading, loadingMessage, loadingType } = useLoading()
 
   if (!loading) return null
-
-  // Different loading animations based on type
   const getLoadingIcon = () => {
     switch (loadingType) {
       case "auth":

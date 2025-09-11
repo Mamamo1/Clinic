@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react"
 import axios from "axios"
-import { capitalizeWords } from "../utils" // Corrected path based on your clarification
-import { FaSpinner } from "react-icons/fa" // Import FaTimes for close icon, FaSpinner for loading
-import CustomModal from "./Modals/CustomModal" // Import the new custom modal
+import { capitalizeWords } from "../utils"
+import { FaSpinner, FaEdit, FaCheck, FaTimes } from "react-icons/fa"
+import CustomModal from "./Modals/CustomModal"
 
 const UserManagement = () => {
   const [users, setUsers] = useState([])
@@ -13,10 +13,15 @@ const UserManagement = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedUser, setSelectedUser] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
-  const [isLoading, setIsLoading] = useState(true) // New loading state
-  const [error, setError] = useState(null) // New error state
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [currentUser, setCurrentUser] = useState(null)
+  const [editingAccountType, setEditingAccountType] = useState(null)
+  const [newAccountType, setNewAccountType] = useState("")
+  const [isUpdating, setIsUpdating] = useState(false)
 
   const USERS_PER_PAGE = 6
+  const accountTypes = ["Doctor", "Nurse", "Dentist", "SHS", "College", "Employee"]
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -24,6 +29,10 @@ const UserManagement = () => {
       setError(null)
       try {
         const auth_token = localStorage.getItem("auth_token")
+        if (!auth_token) {
+          throw new Error("No authentication token found")
+        }
+
         const response = await axios.get("http://localhost:8000/api/users", {
           headers: {
             Authorization: `Bearer ${auth_token}`,
@@ -59,24 +68,105 @@ const UserManagement = () => {
       }
     }
 
+    const getCurrentUser = async () => {
+      try {
+        const auth_token = localStorage.getItem("auth_token")
+        if (!auth_token) {
+          setError("Please log in to access user management")
+          return
+        }
+
+
+        const response = await axios.get("http://localhost:8000/api/user", {
+          headers: {
+            Authorization: `Bearer ${auth_token}`,
+          },
+        })
+
+
+        if (response.data && response.data.account_type) {
+          setCurrentUser(response.data)
+        } else {
+          setError("Invalid user data received - missing account_type")
+        }
+      } catch (err) {
+        console.error("[v0] Error fetching current user:", err)
+        if (err.response?.status === 401) {
+          setError("Authentication failed. Please log in again.")
+          localStorage.removeItem("auth_token")
+        } else {
+          setError("Failed to load user information")
+        }
+      }
+    }
+
     fetchUsers()
+    getCurrentUser()
   }, [])
 
+  const updateAccountType = async (userId, accountType) => {
+    setIsUpdating(true)
+    try {
+      const auth_token = localStorage.getItem("auth_token")
+      await axios.put(
+        `http://localhost:8000/api/users/${userId}/account-type`,
+        { account_type: accountType },
+        {
+          headers: {
+            Authorization: `Bearer ${auth_token}`,
+          },
+        },
+      )
+
+      const updatedUsers = users.map((user) =>
+        user.id === userId ? { ...user, account_type: accountType.toLowerCase() } : user,
+      )
+      setUsers(updatedUsers)
+      setFilteredUsers(updatedUsers)
+      setEditingAccountType(null)
+      setNewAccountType("")
+
+      alert("Account type updated successfully!")
+    } catch (err) {
+      console.error("Error updating account type:", err)
+      alert("Failed to update account type. " + (err.response?.data?.message || "Please try again."))
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const canEditAccountType = () => {
+    const isSuperAdmin = currentUser?.account_type?.toLowerCase() === "superadmin"
+    return isSuperAdmin
+  }
+
+  const startEditingAccountType = (user) => {
+    setEditingAccountType(user.id)
+    setNewAccountType(capitalizeWords(user.account_type))
+  }
+
+  const cancelEditing = () => {
+    setEditingAccountType(null)
+    setNewAccountType("")
+  }
+
   const filterGroups = {
-    All: ["shs", "college", "employee", "doctor", "nurse", "dentist"], // Include staff in 'All'
+    All: ["shs", "college", "employee", "doctor", "nurse", "dentist"],
     Staff: ["doctor", "nurse", "dentist"],
     SHS: ["shs"],
     College: ["college"],
     Employee: ["employee"],
   }
 
-  // Filter by search term
   useEffect(() => {
     if (!searchTerm) {
-      setFilteredUsers(users)
+      const nonSuperAdminUsers = users.filter((user) => user.account_type !== "superadmin")
+      setFilteredUsers(nonSuperAdminUsers)
     } else {
       const lowerSearch = searchTerm.toLowerCase()
       const filtered = users.filter((user) => {
+        if (user.account_type === "superadmin") return false
+
         const fullName = `${user.first_name} ${user.last_name}`.toLowerCase()
         return (
           fullName.includes(lowerSearch) ||
@@ -89,11 +179,11 @@ const UserManagement = () => {
     setCurrentPage(1)
   }, [searchTerm, users])
 
-  // Filter by account_type (level)
   const handleFilter = (filter) => {
     setActiveFilter(filter)
     if (filter === "All") {
-      setFilteredUsers(users) // 'All' means no filter applied to the original list
+      const nonSuperAdminUsers = users.filter((user) => user.account_type !== "superadmin")
+      setFilteredUsers(nonSuperAdminUsers)
     } else if (filter === "Staff") {
       const filtered = users.filter((user) => filterGroups[filter].includes(user.account_type))
       setFilteredUsers(filtered)
@@ -108,9 +198,10 @@ const UserManagement = () => {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      <h1 className="text-3xl font-bold mb-6 text-blue-800">User Management</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-blue-800">User Management</h1>
+      </div>
 
-      {/* Search Input */}
       <input
         type="text"
         placeholder="Search by name or student/employee ID..."
@@ -120,7 +211,6 @@ const UserManagement = () => {
         aria-label="Search users"
       />
 
-      {/* Filters */}
       <div className="mb-6 flex flex-wrap gap-3">
         {["All", "SHS", "College", "Employee", "Staff"].map((level) => (
           <button
@@ -153,7 +243,6 @@ const UserManagement = () => {
         </div>
       ) : (
         <>
-          {/* User Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {paginatedUsers.map((user) => (
               <div
@@ -165,7 +254,7 @@ const UserManagement = () => {
                     {user.first_name?.[0] || ""}
                     {user.last_name?.[0] || ""}
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <p className="font-semibold text-lg text-blue-800">
                       {user.first_name} {user.last_name}
                     </p>
@@ -186,14 +275,75 @@ const UserManagement = () => {
                     </p>
                   </div>
                 </div>
-                <p className="text-sm text-gray-700 mb-1">
-                  <span className="font-semibold">Type:</span> {capitalizeWords(user.account_type)}
-                </p>
+
+                <div className="mb-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700">
+                      <span className="font-semibold">Type:</span>
+                    </span>
+                    {canEditAccountType() && editingAccountType !== user.id && (
+                      <button
+                        onClick={() => {
+                          startEditingAccountType(user)
+                        }}
+                        className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-xs font-medium transition-colors shadow-sm"
+                        title="Edit account type"
+                      >
+                        <FaEdit size={14} />
+                        Edit Role
+                      </button>
+                    )}
+                    {!canEditAccountType() && (
+                      <span className="text-xs text-gray-400 italic">
+                        {!currentUser
+                          ? "Loading permissions..."
+                          : currentUser.account_type?.toLowerCase() !== "superadmin"
+                            ? `${capitalizeWords(currentUser.account_type)} - No edit permission`
+                            : "No edit permission"}
+                      </span>
+                    )}
+                  </div>
+
+                  {editingAccountType === user.id ? (
+                    <div className="mt-2">
+                      <select
+                        value={newAccountType}
+                        onChange={(e) => setNewAccountType(e.target.value)}
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        disabled={isUpdating}
+                      >
+                        {accountTypes.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          onClick={() => updateAccountType(user.id, newAccountType)}
+                          disabled={isUpdating || !newAccountType}
+                          className="flex items-center gap-1 px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 disabled:opacity-50"
+                        >
+                          {isUpdating ? <FaSpinner className="animate-spin" size={10} /> : <FaCheck size={10} />}
+                          Save
+                        </button>
+                        <button
+                          onClick={cancelEditing}
+                          disabled={isUpdating}
+                          className="flex items-center gap-1 px-2 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700 disabled:opacity-50"
+                        >
+                          <FaTimes size={10} />
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-700">{capitalizeWords(user.account_type)}</p>
+                  )}
+                </div>
+
                 <p className="text-sm text-gray-700 mb-1">
                   <span className="font-semibold">Course/Dept:</span> {user.course || "N/A"}
-                </p>
-                <p className="text-sm text-gray-700">
-                  <span className="font-semibold">Last Visit:</span> {user.last_visit || "N/A"}
                 </p>
                 <button
                   className="text-blue-700 mt-4 font-medium hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 -ml-2"
@@ -205,7 +355,6 @@ const UserManagement = () => {
             ))}
           </div>
 
-          {/* Pagination */}
           <div className="mt-8 flex justify-center items-center gap-2">
             <button
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
@@ -242,7 +391,6 @@ const UserManagement = () => {
         </>
       )}
 
-      {/* Custom Modal for User Information */}
       <CustomModal isOpen={!!selectedUser} onClose={() => setSelectedUser(null)} title="User Information">
         {selectedUser && (
           <div className="space-y-3 text-gray-800 text-base">
@@ -281,10 +429,8 @@ const UserManagement = () => {
             <p>
               <strong>Emergency Contact:</strong> {selectedUser.emergency_contact || "N/A"}
             </p>{" "}
-            {/* Assuming emergency_contact field */}
             <p>
-              <strong>Address:</strong> {selectedUser.street}, {selectedUser.city}, {selectedUser.state},{" "}
-              {selectedUser.zipcode}
+              <strong>Address:</strong> {selectedUser.street}, {selectedUser.city}, {selectedUser.state}{" "}
             </p>
           </div>
         )}

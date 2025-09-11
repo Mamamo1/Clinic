@@ -1,5 +1,3 @@
-"use client"
-
 import { useNavigate } from "react-router-dom"
 import { UserIcon, FileText, Calendar } from "lucide-react"
 import { motion } from "framer-motion"
@@ -7,17 +5,14 @@ import { useState, useEffect } from "react"
 
 export default function UserDashboard() {
   const navigate = useNavigate()
-  const [userName, setUserName] = useState("User") // Default name
+  const [userName, setUserName] = useState("User")
   const [currentTime, setCurrentTime] = useState(new Date())
 
   useEffect(() => {
-    // Fetch user name from localStorage or API if available
-    const storedUserName = localStorage.getItem("first_name") // Assuming first_name is stored
+    const storedUserName = localStorage.getItem("first_name") 
     if (storedUserName) {
       setUserName(storedUserName)
     }
-
-    // Update time every minute
     const timer = setInterval(() => {
       setCurrentTime(new Date())
     }, 60000)
@@ -25,15 +20,6 @@ export default function UserDashboard() {
     return () => clearInterval(timer)
   }, [])
 
-  const handleLogout = () => {
-    // Mock logout for demo
-    localStorage.removeItem("auth_token")
-    localStorage.removeItem("account_type")
-    localStorage.removeItem("first_name")
-    navigate("/login")
-  }
-
-  // Custom Card component using plain Tailwind CSS
   const CustomCard = ({ icon, title, subtitle, onClick }) => (
     <motion.div
       whileHover={{ scale: 1.03, y: -8 }}

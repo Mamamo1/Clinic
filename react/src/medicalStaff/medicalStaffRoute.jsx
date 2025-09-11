@@ -2,24 +2,23 @@
 
 import { useEffect, useState } from "react"
 import { Navigate } from "react-router-dom"
-import { useLoading } from "../../user/components/LoadingContext"
+import { useLoading } from "../user/components/LoadingContext"
 
-const AdminRoute = ({ children }) => {
+const MedicalStaffRoute = ({ children }) => {
   const [user, setUser] = useState(null)
   const [unauthorized, setUnauthorized] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [loading, setLoading] = useState(true)
   const { showLoading, hideLoading } = useLoading()
 
   useEffect(() => {
-    const checkAdminAuth = async () => {
+    const checkMedicalStaffAuth = async () => {
       try {
-        showLoading("Verifying admin access...", "security")
+        showLoading("Verifying medical staff access...", "auth")
 
         const auth_token = localStorage.getItem("auth_token")
 
         if (!auth_token) {
           setUnauthorized(true)
-          setIsLoading(false)
           return
         }
 
@@ -29,10 +28,11 @@ const AdminRoute = ({ children }) => {
           },
         })
 
-
         if (response.ok) {
           const userData = await response.json()
-          if (userData && userData.account_type === "SuperAdmin") {
+
+          const medicalStaffRoles = ["Doctor", "Nurse", "Dentist"]
+          if (userData && medicalStaffRoles.includes(userData.account_type)) {
             setUser(userData)
           } else {
             localStorage.removeItem("auth_token")
@@ -49,16 +49,16 @@ const AdminRoute = ({ children }) => {
         localStorage.removeItem("account_type")
         setUnauthorized(true)
       } finally {
+        setLoading(false)
         hideLoading()
-        setIsLoading(false)
       }
     }
 
-    checkAdminAuth()
-  }, [])
+    checkMedicalStaffAuth()
+  }, []) // Removed showLoading and hideLoading from dependencies to prevent infinite loop
 
-  if (isLoading) {
-    return null // LoadingScreen is handled by LoadingContext
+  if (loading) {
+    return null
   }
 
   if (unauthorized) {
@@ -68,4 +68,4 @@ const AdminRoute = ({ children }) => {
   return user ? children : <Navigate to="/login" replace />
 }
 
-export default AdminRoute
+export default MedicalStaffRoute

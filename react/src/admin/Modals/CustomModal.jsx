@@ -1,5 +1,4 @@
-"use client"
-import { FaTimes } from "react-icons/fa" // For the close icon
+import { FaTimes } from "react-icons/fa"
 
 const CustomModal = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null
